@@ -26,7 +26,10 @@ Primary sort: **Calmar** (CAGR / |MDD|). Sharpe is always shown as a sanity chec
 
 | Strategy | Calmar | Sharpe | CAGR | MDD | Trades | Data | Report |
 |---|---:|---:|---:|---:|---:|---|---|
-| `LongOnlyStrategy` (placeholder) | -4.55 | -0.36 | -1.61% | 1.86% | 49 | BTC 1h, 2025-10-06 → 2026-04-24 | — |
+| `LongOnlyStrategy` (placeholder SMA cross) | -4.55 | -0.36 | -1.61% | 1.86% | 49 | BTC 1h, 2025-10-06 → 2026-04-24 | — |
+| `TrendFilter200` (1h SMA200 regime filter) | -6.84 | -2.54 | -5.44% | 4.22% | 90 | BTC 1h, 2025-10-06 → 2026-04-24 | [2026-04-24](results/2026-04-24-trend-filter-200.md) |
+
+**Benchmark (buy-and-hold):** market change -37.20% on the same window. Every strategy tested so far beats buy-and-hold by a lot, but none of them are actually *good* — the baseline is a bear market, so a zero-activity strategy would score highly too.
 
 Rows added here whenever a new strategy is backtested. Link the Report column to the relevant `wiki/results/<date>-<strategy>.md` file.
 

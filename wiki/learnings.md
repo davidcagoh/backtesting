@@ -39,6 +39,9 @@ Ordered by how much the answer would change what we do next. Each should have a 
 4. **Do crypto-specific factors (funding rates, perp basis, on-chain flow) add orthogonal signal to price-only strategies?** Unexplored.
    - **Test:** build a simple funding-rate carry signal once a price-only baseline exists.
    - **Search:** crypto carry / funding-rate strategies, perp basis trading.
+5. **Can a regime filter work on crypto at all, given the `TrendFilter200` failure?** The naive 1h SMA200 cross-up failed (see Ruled Out). The family isn't dead — it's the *specification* that failed. Open question whether any of: (a) longer regime window (1h SMA720 ≈ 30d), (b) slope-confirmed entries (`sma.diff(24) > 0`), (c) higher-timeframe agreement (daily SMA200 filtering 1h execution), fixes the whipsaw problem.
+   - **Test:** implement (a) first — cheapest change, same file. Then (b). (c) needs daily data downloaded.
+   - **Search:** crypto-specific trend-filter empirical studies; whipsaw suppression in bear regimes.
 
 ---
 
@@ -49,6 +52,7 @@ Explain the mechanism, not just the metric — so we don't re-explore variants.
 - **Hunting for Ethan's original data source.** Confirmed there's no canonical public bulk OHLCV for Hyperliquid. Whatever he used was ad hoc and isn't worth the time to retrace. Mechanism: Hyperliquid simply does not publish it. See `decisions/002`.
 - **Maintaining `freqtrade_hyperliquid_download-data` as a separate repo.** It existed because freqtrade didn't support Hyperliquid; now it does. Mechanism: upstream closed the gap. See `decisions/001`.
 - **Using freqtrade's built-in `download-data` for Hyperliquid.** Hard-disabled in the adapter via `ohlcv_has_history=False`. Mechanism: not a config toggle — it's a structural refusal in the exchange class. Use `scripts/download_hyperliquid.py` instead.
+- **Naive 1h SMA200 cross-up as a regime filter** (`TrendFilter200`, 2026-04-24). Calmar -6.84, 12.2% win rate, 26 consecutive losses. Mechanism: 200 periods on 1h = ~8 days, too short to define a regime in crypto. In a sustained bear every cross-up is a bull-trap. Short-window, single-asset, single-timeframe regime filters get whipsawed. The broader family ("regime filters on crypto majors") is still open — see `wiki/results/2026-04-24-trend-filter-200.md` for candidate refinements (longer window, slope confirmation, higher-timeframe agreement).
 
 ---
 
