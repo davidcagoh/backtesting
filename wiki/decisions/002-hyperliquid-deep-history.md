@@ -5,7 +5,7 @@
 
 ## Decision
 
-For backtesting we accept freqtrade's native `download-data` output as the baseline data source, capped at ~5000 candles per timeframe. If deeper history becomes necessary, reconstruct from Hyperliquid's S3 archive rather than hunting for a third-party dump.
+Use `scripts/download_hyperliquid.py` (hits the public `/info candleSnapshot` endpoint directly) as the baseline data source, capped at ~5000 candles per (pair, timeframe). **Note:** freqtrade's own `download-data` command does *not* work for Hyperliquid — verified 2026-04-24, the adapter sets `ohlcv_has_history=False` and the command refuses with "Hyperliquid does not support downloading trades or ohlcv data." The custom script is the workaround. If deeper history becomes necessary, reconstruct from Hyperliquid's S3 archive rather than hunting for a third-party dump.
 
 ## Why
 

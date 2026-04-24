@@ -23,7 +23,8 @@ Crypto strategy backtesting setup built on [Freqtrade](https://www.freqtrade.io/
 | `freqtrade/` | Fresh clone of the upstream Freqtrade repo (gitignored — it has its own `.git`). Ships a Hyperliquid adapter. |
 | `user_data/config.json` | Minimal Hyperliquid config (dry_run, futures/isolated, USDC stake, Feather format). No keys committed — fill `walletAddress` / `privateKey` only for live trading, not needed for backtesting. |
 | `user_data/strategies/LongOnlyStrategy.py` | SMA-cross placeholder strategy so the original `notes.md` command still runs. Replace with real logic. |
-| `user_data/data/hyperliquid/` | Where `download-data` writes Feather OHLCV files. |
+| `user_data/data/hyperliquid/` | Where `scripts/download_hyperliquid.py` writes Feather OHLCV files (futures land under `futures/`). |
+| `scripts/download_hyperliquid.py` | Custom Hyperliquid OHLCV downloader. Required because freqtrade's built-in `download-data` is disabled for Hyperliquid. |
 | `notes.md` | Original crib sheet (preserved). |
 
 The old `freqtrade_hyperliquid_download-data` gitlink was removed — see `decisions/001`.
@@ -44,29 +45,26 @@ pip install -e .        # or: pip install -r requirements.txt
 
 ## Download data
 
-Native freqtrade downloader, capped at ~5000 candles per timeframe (Hyperliquid API limit — see `decisions/002`):
+**Use the custom script at `scripts/download_hyperliquid.py`** — freqtrade's built-in `download-data` is disabled for Hyperliquid (`ohlcv_has_history=False` in the adapter). The script hits `https://api.hyperliquid.xyz/info` directly and writes Feather files into freqtrade's expected layout. See `decisions/002` for why.
 
 Run from the wrapper repo root (`backtesting/`):
 
 ```shell
-freqtrade download-data \
-  --userdir user_data \
-  -c user_data/config.json \
-  --exchange hyperliquid \
-  --trading-mode futures \
-  --timeframes 5m 1h \
-  --data-format-ohlcv feather \
-  -p BTC/USDC:USDC ETH/USDC:USDC
+./freqtrade/.venv/bin/python scripts/download_hyperliquid.py \
+  --pairs BTC/USDC:USDC ETH/USDC:USDC \
+  --timeframes 1h 4h
 ```
+
+Cap: ~5000 candles per (pair, timeframe). That's ~208 days at 1h, ~833 days at 4h — Hyperliquid API ceiling, not a tooling limitation.
 
 ## Backtest
 
 ```shell
-freqtrade backtesting \
+./freqtrade/.venv/bin/freqtrade backtesting \
   --userdir user_data \
   -c user_data/config.json \
   --data-format-ohlcv feather \
-  -s LongOnlyStrategy -i 5m \
+  -s LongOnlyStrategy -i 1h \
   -p BTC/USDC:USDC \
   --eps --max-open-trades 1
 ```
