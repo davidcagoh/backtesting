@@ -1,16 +1,18 @@
 # Hyperliquid - things to note
 - USDC as the quote currency
-- Check `freqtrade_hyperliquid_download-data/data_content_futures.txt` or `..._spot.txt` for available pairs and timerange
+- Futures pair notation: `BTC/USDC:USDC` (base/quote:settle)
+- Data format on disk: Feather
 
 # Backtesting command
 
+Updated 2026-04-24 — paths are now repo-relative. See `wiki/_index.md` for the full setup / download flow.
+
 ```shell
 freqtrade backtesting \
-  -c /Users/ectan/Coding-new/Trading/freqtrade/user_data/config.json \
-  --data-dir /Users/ectan/Coding-new/Trading/freqtrade_hyperliquid_download-data/user_data/data/hyperliquid \
+  --userdir user_data \
+  -c user_data/config.json \
   --data-format-ohlcv feather \
   -s LongOnlyStrategy -i 5m \
   -p BTC/USDC:USDC \
   --eps --max-open-trades 1
 ```
-

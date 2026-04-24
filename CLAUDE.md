@@ -9,7 +9,9 @@ This is a crypto strategy backtesting setup built on [Freqtrade](https://www.fre
 - `notes.md` — the canonical backtest command and Hyperliquid quirks (USDC quote, pair lists in `data_content_{spot,futures}.txt`).
 - `wiki/` — project knowledge base. Read `wiki/_index.md` and `wiki/learnings.md` before substantive work; update them when facts change.
 
-**Current state (2026-04-24):** both subproject directories are empty on disk (gitlinks recorded, working trees not cloned). Original author paths in `notes.md` point at `/Users/ectan/...` and need rewriting for this machine. Goal of the current revisit: evaluate whether this is fast enough / mature enough to back real trading of personal crypto holdings. Don't start "speed optimization" work without first rehydrating and reproducing the baseline backtest — see `wiki/learnings.md` → "What to Focus on Next".
+**Current state (2026-04-24):** freqtrade was freshly cloned from upstream; the separate `freqtrade_hyperliquid_download-data` repo was removed (upstream now ships a Hyperliquid adapter, see `wiki/decisions/001`). Minimal `user_data/config.json` and a placeholder `LongOnlyStrategy` exist. Install step (`pip install -e .` inside `freqtrade/`) still needs to be run manually. Goal of the current revisit: evaluate whether this is fast enough / mature enough to back real trading of personal crypto holdings. Don't start "speed optimization" work without first installing, downloading data, and reproducing the baseline backtest — see `wiki/learnings.md` → "What to Focus on Next".
+
+**Data sourcing:** Hyperliquid API returns only ~5000 historic candles and publishes no bulk OHLCV. Accept this for now. See `wiki/decisions/002`.
 
 Use the **wiki** skill (`/wiki`) to add papers, decisions, or experiment results as they come up.
 

@@ -1,6 +1,6 @@
 # Backtesting Wiki
 
-Crypto strategy backtesting scaffolding built on [Freqtrade](https://www.freqtrade.io/en/stable/), targeting Hyperliquid (USDC-quoted) markets. Dormant since ~2025; being revisited in 2026-04 as a potential base for actively trading personal crypto holdings.
+Crypto strategy backtesting setup built on [Freqtrade](https://www.freqtrade.io/en/stable/), targeting Hyperliquid (USDC-quoted) markets. Revived 2026-04 as a possible base for actively trading personal crypto holdings.
 
 **Last updated:** 2026-04-24
 
@@ -9,55 +9,77 @@ Crypto strategy backtesting scaffolding built on [Freqtrade](https://www.freqtra
 ## Contents
 
 - [learnings.md](learnings.md) — confirmed facts, open questions, ruled-out directions
-- `decisions/` — engineering/design decisions (empty)
+- `decisions/`
+  - [001-drop-external-data-repo.md](decisions/001-drop-external-data-repo.md) — removed the `freqtrade_hyperliquid_download-data` gitlink
+  - [002-hyperliquid-deep-history.md](decisions/002-hyperliquid-deep-history.md) — accept the 5000-candle API cap; reconstruct from S3 only if needed
 - `experiments/` — backtest runs and results (empty)
 
 ---
 
 ## Repository Layout
 
-This repo is a wrapper around two **git-linked subprojects** (tracked as gitlinks, but no `.gitmodules` — they're standalone clones that happen to live here):
+| Path | Role |
+|------|------|
+| `freqtrade/` | Fresh clone of the upstream Freqtrade repo (gitignored — it has its own `.git`). Ships a Hyperliquid adapter. |
+| `user_data/config.json` | Minimal Hyperliquid config (dry_run, futures/isolated, USDC stake, Feather format). No keys committed — fill `walletAddress` / `privateKey` only for live trading, not needed for backtesting. |
+| `user_data/strategies/LongOnlyStrategy.py` | SMA-cross placeholder strategy so the original `notes.md` command still runs. Replace with real logic. |
+| `user_data/data/hyperliquid/` | Where `download-data` writes Feather OHLCV files. |
+| `notes.md` | Original crib sheet (preserved). |
 
-| Path | Role | Upstream |
-|------|------|----------|
-| `freqtrade/` | Clone of the Freqtrade starter. Strategy code, config, and the `freqtrade` CLI live here. | github.com/freqtrade/freqtrade |
-| `freqtrade_hyperliquid_download-data/` | Holds OHLCV data for Hyperliquid under `user_data/data/hyperliquid/`. Freqtrade has no native Hyperliquid downloader yet, so data came from an external source (exact provenance lost). | unknown — third-party Hyperliquid dump |
-| `notes.md` | Original crib sheet: Hyperliquid quote = USDC, pair lists in `data_content_{spot,futures}.txt`, canonical `freqtrade backtesting` command. | — |
-
-> **State as of 2026-04-24:** both subproject directories are empty on this machine. The gitlink SHAs are recorded but the working trees need to be re-cloned before anything runs.
-
----
-
-## Current Status
-
-- **What works (historically):** A `LongOnlyStrategy` backtested on `BTC/USDC:USDC` 5m candles on Hyperliquid via the command in `notes.md`.
-- **What's missing now:** Subproject working trees aren't checked out locally. Paths in `notes.md` point to `/Users/ectan/...` (original author's machine) — need path fixes for this environment.
-- **Why we're back:** Considering using this to backtest strategies against real personal crypto allocations. Speed of iteration is the first bottleneck worth attacking.
+The old `freqtrade_hyperliquid_download-data` gitlink was removed — see `decisions/001`.
 
 ---
 
-## Canonical Backtest Command
+## Setup (first run on this machine)
 
-From `notes.md` — paths are Ethan's original; rewrite for your machine before running:
+```shell
+cd freqtrade
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .        # or: pip install -r requirements.txt
+# talib may need a system install first: brew install ta-lib
+```
+
+> The install step needs explicit approval in agent sessions — it executes freqtrade's setup code. Run it manually.
+
+## Download data
+
+Native freqtrade downloader, capped at ~5000 candles per timeframe (Hyperliquid API limit — see `decisions/002`):
+
+Run from the wrapper repo root (`backtesting/`):
+
+```shell
+freqtrade download-data \
+  --userdir user_data \
+  -c user_data/config.json \
+  --exchange hyperliquid \
+  --trading-mode futures \
+  --timeframes 5m 1h \
+  --data-format-ohlcv feather \
+  -p BTC/USDC:USDC ETH/USDC:USDC
+```
+
+## Backtest
 
 ```shell
 freqtrade backtesting \
-  -c /Users/ectan/Coding-new/Trading/freqtrade/user_data/config.json \
-  --data-dir /Users/ectan/Coding-new/Trading/freqtrade_hyperliquid_download-data/user_data/data/hyperliquid \
+  --userdir user_data \
+  -c user_data/config.json \
   --data-format-ohlcv feather \
   -s LongOnlyStrategy -i 5m \
   -p BTC/USDC:USDC \
   --eps --max-open-trades 1
 ```
 
-Flags worth remembering:
-- `--data-format-ohlcv feather` — data is stored as Feather, not the Freqtrade default JSON/parquet.
-- `--eps` — enable position-stacking (`--enable-position-stacking`), needed when the strategy might re-enter.
-- `-p BTC/USDC:USDC` — the `:USDC` suffix is Freqtrade's futures-pair notation (settlement currency).
+Flag notes:
+- `--data-format-ohlcv feather` — data is stored as Feather.
+- `--eps` — `--enable-position-stacking`, allows re-entry.
+- `-p BTC/USDC:USDC` — futures pair notation (base/quote:settle).
 
 ---
 
 ## Useful Freqtrade Docs
 
 - Strategy 101: https://www.freqtrade.io/en/stable/strategy-101/
-- Main docs: https://www.freqtrade.io/en/stable/
+- Exchanges → Hyperliquid: https://www.freqtrade.io/en/stable/exchanges/#hyperliquid
+- Historical data note (upstream Hyperliquid): https://hyperliquid.gitbook.io/hyperliquid-docs/historical-data
