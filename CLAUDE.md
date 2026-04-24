@@ -17,6 +17,17 @@ Use the **wiki** skill (`/wiki`) to add papers, decisions, or experiment results
 
 ---
 
+## Session Start Routine
+
+At the start of every session, automatically run these four steps and report a brief status — no need to ask first:
+
+1. **Sync wiki:** `git pull origin main` to pick up anything the weekly paper-search agent pushed (scheduled Sunday 4 AM ET — see `wiki/agent-config/paper-search-trigger.md`).
+2. **Read state:** Read `wiki/_index.md` and `wiki/learnings.md` — these are the authoritative project state and search priorities. Do this before any substantive work.
+3. **Run baseline eval:** `./scripts/run_eval.sh` — runs `LongOnlyStrategy` on 1h BTC/USDC:USDC (~200 days). Primary metric is **Calmar**; also displays **Sharpe**, CAGR, MDD, trade count. If Calmar changes materially from the last recorded value in `wiki/_index.md` leaderboard, something regressed. See `wiki/decisions/003-baseline-eval.md` to change the baseline.
+4. **Report:** 4–6 bullets: what the agent added since last session, eval results (Calmar + Sharpe at minimum), open tasks worth doing today.
+
+---
+
 ## Behavioral guidelines
 
 Guidelines to reduce common LLM coding mistakes.

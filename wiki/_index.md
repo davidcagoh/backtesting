@@ -8,11 +8,27 @@ Crypto strategy backtesting setup built on [Freqtrade](https://www.freqtrade.io/
 
 ## Contents
 
-- [learnings.md](learnings.md) — confirmed facts, open questions, ruled-out directions
+- [learnings.md](learnings.md) — confirmed facts, open hypotheses, ruled-out directions, search priorities
 - `decisions/`
   - [001-drop-external-data-repo.md](decisions/001-drop-external-data-repo.md) — removed the `freqtrade_hyperliquid_download-data` gitlink
   - [002-hyperliquid-deep-history.md](decisions/002-hyperliquid-deep-history.md) — accept the 5000-candle API cap; reconstruct from S3 only if needed
-- `experiments/` — backtest runs and results (empty)
+  - [003-baseline-eval.md](decisions/003-baseline-eval.md) — baseline used by `scripts/run_eval.sh` and the Session Start Routine
+- `experiments/` — backtest runs and results
+- `results/` — per-strategy report cards (one file per run)
+- `papers/` — summaries of relevant research (populated by the weekly paper-search agent)
+- `agent-config/paper-search-trigger.md` — master prompt for the weekly paper-search RemoteTrigger
+
+---
+
+## Strategy Leaderboard
+
+Primary sort: **Calmar** (CAGR / |MDD|). Sharpe is always shown as a sanity check. Higher is better on both. See `wiki/decisions/003-baseline-eval.md` for the evaluation baseline.
+
+| Strategy | Calmar | Sharpe | CAGR | MDD | Trades | Data | Report |
+|---|---:|---:|---:|---:|---:|---|---|
+| `LongOnlyStrategy` (placeholder) | -4.55 | -0.36 | -1.61% | 1.86% | 49 | BTC 1h, 2025-10-06 → 2026-04-24 | — |
+
+Rows added here whenever a new strategy is backtested. Link the Report column to the relevant `wiki/results/<date>-<strategy>.md` file.
 
 ---
 
