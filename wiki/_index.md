@@ -4,6 +4,8 @@ Crypto strategy backtesting setup built on [Freqtrade](https://www.freqtrade.io/
 
 **Last updated:** 2026-04-26
 
+**Current state:** Automated research loop live. Weekly paper-search agent (`trig_013s3hXkiYrSnYh2Qes1KPws`, Sun 04:00 ET) scheduled and verified end-to-end on 2026-04-24 — it reads `wiki/learnings.md` priorities, writes to `wiki/papers/`, updates `wiki/learnings.md` with narrowed next-round priorities, commits and pushes. Two strategies on the leaderboard so far; both losing, but `TrendFilter200` is ruled out with refinement path recorded. No "good" strategy yet.
+
 ---
 
 ## Contents
