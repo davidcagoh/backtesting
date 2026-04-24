@@ -16,7 +16,20 @@ Crypto strategy backtesting setup built on [Freqtrade](https://www.freqtrade.io/
 - `experiments/` — backtest runs and results
 - `results/` — per-strategy report cards (one file per run)
 - `papers/` — summaries of relevant research (populated by the weekly paper-search agent)
+- `logs/` — weekly paper-search run logs
 - `agent-config/paper-search-trigger.md` — master prompt for the weekly paper-search RemoteTrigger
+
+---
+
+## Papers
+
+Research summaries added by the weekly paper-search agent. Sorted newest-first. Primary sort: direct applicability to Freqtrade strategy on Hyperliquid perps.
+
+| Paper | Venue | Date | Priority addressed | File |
+|-------|-------|------|--------------------|------|
+| Explainable Regime Aware Investing | arXiv 2603.04441 | Mar 2026 | P2 — Regime detection | [wasserstein-hmm-regime-investing-2026.md](papers/wasserstein-hmm-regime-investing-2026.md) |
+| The Two-Tiered Structure of Cryptocurrency Funding Rate Markets | MDPI Mathematics 14(2):346 | Jan 2026 | P1+P3 — Funding rate carry + execution costs | [two-tiered-funding-rate-markets-2026.md](papers/two-tiered-funding-rate-markets-2026.md) |
+| Predictability of Funding Rates | SSRN 5576424 | Oct 2025 | P1 — Funding rate carry signal | [funding-rate-predictability-inan-2025.md](papers/funding-rate-predictability-inan-2025.md) |
 
 ---
 

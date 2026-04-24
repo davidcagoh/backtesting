@@ -36,12 +36,17 @@ Ordered by how much the answer would change what we do next. Each should have a 
    - **Test:** pick a first real strategy; its timeframe answers the question.
 3. **Is Freqtrade's Hyperliquid execution adapter mature enough to go live?** Separate track from backtesting; relevant only once a strategy is trustworthy.
    - **Test:** read freqtrade changelog entries tagged `hyperliquid`; check issue tracker for open execution bugs.
-4. **Do crypto-specific factors (funding rates, perp basis, on-chain flow) add orthogonal signal to price-only strategies?** Unexplored.
-   - **Test:** build a simple funding-rate carry signal once a price-only baseline exists.
-   - **Search:** crypto carry / funding-rate strategies, perp basis trading.
-5. **Can a regime filter work on crypto at all, given the `TrendFilter200` failure?** The naive 1h SMA200 cross-up failed (see Ruled Out). The family isn't dead — it's the *specification* that failed. Open question whether any of: (a) longer regime window (1h SMA720 ≈ 30d), (b) slope-confirmed entries (`sma.diff(24) > 0`), (c) higher-timeframe agreement (daily SMA200 filtering 1h execution), fixes the whipsaw problem.
-   - **Test:** implement (a) first — cheapest change, same file. Then (b). (c) needs daily data downloaded.
+4. **Do crypto-specific factors (funding rates, perp basis, on-chain flow) add orthogonal signal to price-only strategies?** Partially explored — see papers below.
+   - **What we know:** Funding rates on BTC perps (Binance, Bybit) are one-step-ahead predictable via DAR models but predictability is time-varying (Inan 2025). Roughly 60% of apparent carry opportunities on DEX venues (like Hyperliquid) are eaten by transaction costs + spread reversals (Zhivkov 2026). A carry strategy therefore needs a minimum funding-rate threshold (≥20–25bps per 8h is rough breakeven; exact number for Hyperliquid TBD) AND a rolling DAR forecast confirming the rate will persist.
+   - **Test:** implement a funding-rate threshold + DAR-direction gated carry strategy. Requires adding funding-rate data fetching to `scripts/download_hyperliquid.py` (Hyperliquid API exposes current funding rate; build a collector).
+   - **Search:** crypto carry / funding-rate strategies, perp basis trading — still open but now better-scoped.
+5. **Can a regime filter work on crypto at all, given the `TrendFilter200` failure?** The naive 1h SMA200 cross-up failed (see Ruled Out). The family isn't dead — it's the *specification* that failed. Open question whether any of: (a) longer regime window (1h SMA720 ≈ 30d), (b) slope-confirmed entries (`sma.diff(24) > 0`), (c) higher-timeframe agreement (daily SMA200 filtering 1h execution), (d) probabilistic regime via 2-state Gaussian HMM, fixes the whipsaw problem.
+   - **What we know:** A Wasserstein HMM on a cross-asset daily universe achieves Sharpe 2.18 vs SPX 1.18 and MDD −5.43% vs −14.62% (arXiv 2603.04441). The key technique — Wasserstein-distance label matching across rolling re-fits — is directly applicable at 1h crypto frequency to avoid the label-switching problem.
+   - **Test:** implement (a) first — cheapest change, same file. Then (d) — replace SMA filter with `hmmlearn` 2-state Gaussian HMM on rolling 500h returns, enter when P(bull) > 0.6. (c) needs daily data downloaded.
    - **Search:** crypto-specific trend-filter empirical studies; whipsaw suppression in bear regimes.
+6. **Does the CEX → Hyperliquid (DEX) funding-rate lead time create an exploitable signal?** Zhivkov (2026) shows Granger causality runs CEX→DEX with zero reverse; the lead is measured in minutes on 1-min data. At 1h frequency this lag may be fully collapsed, but on 15m or 5m data a CEX (Binance) funding-rate signal might lead Hyperliquid by 1–3 bars.
+   - **Test:** download Binance BTC funding rate at high frequency and correlate with Hyperliquid funding rate lags using Granger test. Determine if lead persists at 15m or 1h.
+   - **Search:** CEX–DEX funding rate lead-lag; Hyperliquid-specific execution dynamics.
 
 ---
 
@@ -74,15 +79,16 @@ Updated 2026-04-24. This section is the source text for the weekly paper-search 
 **Do NOT search for:**
 - Hyperliquid bulk OHLCV sources or historical data archives (ruled out above — none exist).
 - Generic SMA-cross or RSI-cross strategy papers — these are baseline noise, not research.
+- General funding-rate carry papers at the "naive always-on carry" level — we already know carry exists. Search only for papers that address *conditional* carry (threshold-gated, rate-predicted, or cost-adjusted).
 
-**Priority 1 — Crypto perp-specific factors (OPEN).**
-Funding rates, perp basis, open-interest imbalance, liquidation-cascade detection. These don't exist in equity factor literature — the substrate is crypto-native and most quant-finance papers skip it. Search for empirical studies on funding-rate carry, basis trading on perpetual swaps, and liquidation-cascade early-warning signals.
+**Priority 1 — Funding-rate carry on DEX perps: cost-adjusted and conditional (NARROWED).**
+We know (Inan 2025) that BTC perpetual funding rates are one-step-ahead predictable via DAR models, and (Zhivkov 2026) that ~60% of apparent DEX carry is eaten by transaction costs. The open question is now: what is the minimum funding-rate threshold and forecast confidence required for a Hyperliquid carry trade to be profitable net of taker fees? Search for empirical carry strategies that apply cost-thresholds, for Hyperliquid-specific fee schedules, and for any paper studying open-interest imbalance or liquidation-cascade signals as carry-timing overlays.
 
 **Priority 2 — Regime detection for 24/7 markets (OPEN).**
-Equity-market regime-switching models (HMM, SJM, Wasserstein HMM) assume clean calendar structure: overnight gaps, weekends, close auctions. Crypto has none of these. Search for regime models specifically adapted to continuous-trading markets, or evidence that equity-derived models transfer cleanly.
+We now have a strong methodology candidate (Wasserstein HMM, arXiv 2603.04441) but no crypto-specific empirical validation. Search for: (a) papers that apply HMM or regime-switching models directly to crypto 1h or 4h data and report regime-conditional Calmar/Sharpe; (b) papers studying whether equity-derived HMM specifications transfer to continuous-trading (no-weekend) markets without retraining.
 
 **Priority 3 — Backtest-realistic execution on perps (OPEN).**
 Slippage and funding-cost modelling for Hyperliquid-style perp markets. Freqtrade's default execution model was built for spot exchanges. Search for empirical slippage studies on decentralised perp venues, and for any published backtest-vs-live divergence analyses on perps.
 
 **Priority 4 — Mean-reversion at 1h–4h timeframes in crypto majors (OPEN).**
-Our baseline data is 1h and 4h. Search for crypto-specific evidence on mean-reversion horizons and whether the retail-overreaction mechanism that drives it in Chinese A-shares has a crypto analogue (likely yes — retail-heavy, 24/7, high leverage).
+Our baseline data is 1h and 4h. Search for crypto-specific evidence on mean-reversion horizons and whether the retail-overreaction mechanism that drives it in Chinese A-shares has a crypto analogue (likely yes — retail-heavy, 24/7, high leverage). No strong paper found yet — this priority is unchanged.
