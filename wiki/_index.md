@@ -4,7 +4,7 @@ Crypto strategy backtesting setup built on [Freqtrade](https://www.freqtrade.io/
 
 **Last updated:** 2026-04-30
 
-**Current state:** Automated research loop live. Weekly paper-search agent (`trig_013s3hXkiYrSnYh2Qes1KPws`, Sun 04:00 ET) scheduled and verified end-to-end on 2026-04-24 — it reads `wiki/learnings.md` priorities, writes to `wiki/papers/`, updates `wiki/learnings.md` with narrowed next-round priorities, commits and pushes. Three strategies on the leaderboard; `SmaRegime720` is the first to show positive total return (+0.80%) and closed-trade Calmar (28.96) in a bear window, but the sample is thin (6 trades) and bull-market validation is pending. Two metric notes: (1) Calmar (daily wallet balance) is misleading for sparse strategies — use closed-trade Calmar going forward; (2) any strategy with positive Calmar in the bear window still needs a bull-window test (H7) before live consideration.
+**Current state:** Automated research loop live. Weekly paper-search agent (`trig_013s3hXkiYrSnYh2Qes1KPws`, Sun 04:00 ET) scheduled and verified end-to-end on 2026-04-24 — it reads `wiki/learnings.md` priorities, writes to `wiki/papers/`, updates `wiki/learnings.md` with narrowed next-round priorities, commits and pushes. Four strategies on the leaderboard. `SmaRegime180` (4h, 32 trades, Feb 2024 → Apr 2026) passes H7 bull-window validation: positive Calmar in both bear (6.59) and full bull+bear window (8.68). Prior leaderboard Calmar entries confirmed: LongOnlyStrategy -4.55, TrendFilter200 -6.84 (both closed-trade). Key open items: (1) transaction costs not yet modeled — Hyperliquid taker ~0.035% could absorb most gains; (2) NH-HMM regime filter is the next regime-detection candidate; (3) Calmar is unreliable at N<20 — use SQN as co-primary metric.
 
 ---
 
@@ -40,19 +40,22 @@ Research summaries added by the weekly paper-search agent. Sorted newest-first. 
 
 ## Strategy Leaderboard
 
-Primary sort: **Calmar (closed trades)** (CAGR / |MDD|, computed on closed-trade returns only). Sharpe (closed trades) shown as sanity check. Prior entries used daily-wallet-balance Calmar — see note below. See `wiki/decisions/003-baseline-eval.md` for the evaluation baseline.
+Primary sort: **Calmar (closed trades)**. Co-primary: **SQN** (System Quality Number — penalises thin samples; use this when N<30). All metrics are closed-trade unless noted. See `wiki/decisions/003-baseline-eval.md` for the evaluation baseline. CT = closed trades.
 
-| Strategy | Calmar (CT) | Sharpe (CT) | CAGR | MDD | Trades | Data | Report |
-|---|---:|---:|---:|---:|---:|---|---|
-| `SmaRegime720` (1h SMA720 + slope gate) | **28.96** | 0.20 | +1.66% | 0.30% | 6 | BTC 1h, 2025-10-29 → 2026-04-24 | [2026-04-30](results/2026-04-30-sma-regime-720.md) |
-| `LongOnlyStrategy` (placeholder SMA cross) | n/a¹ | n/a¹ | -1.61% | 1.86% | 49 | BTC 1h, 2025-10-06 → 2026-04-24 | — |
-| `TrendFilter200` (1h SMA200 regime filter) | n/a¹ | n/a¹ | -5.44% | 4.22% | 90 | BTC 1h, 2025-10-06 → 2026-04-24 | [2026-04-24](results/2026-04-24-trend-filter-200.md) |
+| Strategy | Calmar (CT) | SQN | Profit Factor | Sharpe (CT) | CAGR | MDD | Trades | Data | Report |
+|---|---:|---:|---:|---:|---:|---:|---:|---|---|
+| `SmaRegime720` (1h SMA720 + slope gate) | **28.96**² | 0.69 | 3.68 | 0.20 | +1.66% | 0.30% | 6 | BTC 1h, bear, 2025-10-29→2026-04-24 | [2026-04-30](results/2026-04-30-sma-regime-720.md) |
+| `SmaRegime180` (4h SMA180 + slope gate) | **8.68** | 1.02 | 2.72 | 0.14 | +2.83% | 1.74% | 32 | BTC 4h, full, 2024-02-12→2026-04-24 | [2026-04-30](results/2026-04-30-sma-regime-180.md) |
+| `LongOnlyStrategy` (placeholder SMA cross) | -4.55 | -0.53 | 0.81 | -0.36 | -1.61% | 1.86% | 49 | BTC 1h, bear, 2025-10-06→2026-04-24 | — |
+| `TrendFilter200` (1h SMA200 regime filter) | -6.84 | -2.79 | 0.43 | -2.54 | -5.44% | 4.22% | 90 | BTC 1h, bear, 2025-10-06→2026-04-24 | [2026-04-24](results/2026-04-24-trend-filter-200.md) |
 
-¹ Prior entries recorded daily-wallet-balance Calmar (-4.55 and -6.84 respectively). Re-run with `--export trades` to get closed-trade Calmar.
+² Calmar unreliable at N=6 (SQN 0.69). SmaRegime180 (N=32, SQN 1.02) is the more meaningful data point for this family.
 
-**Benchmark (buy-and-hold):** market change -37.20% on the same Oct 2025–Apr 2026 window. Every strategy beats buy-and-hold by a lot, but the baseline is a sustained bear — a zero-activity (flat) strategy would also score highly. Any strategy with positive Calmar here still needs a bull-window test (H7) before live consideration.
+**H7 status:** `SmaRegime180` passes — positive Calmar in both bear-only sub-window (6.59) and full bull+bear window (8.68). The slope-gate SMA family is not ruled out. Next: cost modeling + NH-HMM comparison.
 
-**Metric note:** Freqtrade's "Calmar (daily wallet balance)" penalises sparse strategies by including zero-return flat/cash days in the distribution. Use "Calmar (closed trades)" going forward. CT = closed trades.
+**Cost warning:** All runs use zero transaction costs. Hyperliquid taker fee ~0.035% per side × 2 × 32 trades ≈ 2.24% fee drag — would substantially reduce SmaRegime180's 6.33% gross return. Re-run with fee config before any live consideration.
+
+**Benchmark:** market change -37.20% (bear window), +61.43% (full 4h window). Long-only trend strategies will underperform buy-and-hold in strong bulls — evaluate on risk-adjusted return (Calmar, SQN), not absolute return.
 
 Rows added here whenever a new strategy is backtested. Link the Report column to the relevant `wiki/results/<date>-<strategy>.md` file.
 

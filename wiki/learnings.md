@@ -22,7 +22,11 @@ This file is the self-correction mechanism for the project. Entries in `Ruled Ou
 - **5000 candles is plenty for longer timeframes.** 1h = ~208 days, 4h = ~833 days, 1d = essentially the full life of the exchange. Only sub-hour strategies hit the constraint.
 
 ### Scoring
-- **Primary metric is Calmar (closed trades).** Freqtrade reports two Calmar values: "closed trades" (correct — based on trade return distribution only) and "daily wallet balance" (misleading for sparse strategies — includes flat cash days with 0% return, dragging the mean negative even when closed-trade profit is positive). Use closed-trades Calmar as the primary metric. Sharpe (closed trades) displayed alongside as sanity check. Confirmed 2026-04-30; prior leaderboard entries used daily-wallet-balance Calmar and are marked n/a¹ in the table until re-run.
+- **Co-primary metrics: Calmar (closed trades) + SQN.** Freqtrade reports both. Calmar = CAGR / max_drawdown on closed-trade equity; SQN = sqrt(N) × mean(R) / std(R). Use Calmar as primary when N≥20; use SQN as co-primary always because it explicitly penalises thin samples. At N<20, Calmar is mathematically valid but statistically unreliable — a single outlier trade can produce Calmar >20 on N=6. Always show SQN alongside. Confirmed 2026-04-30.
+- **Also track: Profit Factor and Expectancy.** Profit Factor (gross profit / gross loss) is robust to thin samples and has no N assumption. Expectancy (mean return per trade, as ratio of risk) gives a complementary view. Both are now in the leaderboard.
+- **Sharpe (closed trades) shown as sanity check.** "Daily wallet balance" Sharpe/Calmar penalises sparse strategies; don't use them for decision-making.
+- **Prior leaderboard entries confirmed 2026-04-30:** LongOnlyStrategy closed-trade Calmar -4.55 (SQN -0.53, PF 0.81); TrendFilter200 closed-trade Calmar -6.84 (SQN -2.79, PF 0.43). The table previously said "n/a¹" for these — now corrected.
+- **Transaction costs not yet modeled.** All backtests run with zero fees. Hyperliquid taker fee ~0.035% per side = ~0.07% round-trip per trade. For SmaRegime180 (32 trades) this is ~2.24% fee drag on a 6.33% gross return. Adding realistic fee config to `user_data/config.json` is a prerequisite before any live consideration.
 
 ---
 
@@ -43,7 +47,8 @@ Ordered by how much the answer would change what we do next. Each should have a 
 5. **Can a regime filter work on crypto at all, given the `TrendFilter200` failure?** The naive 1h SMA200 cross-up failed (see Ruled Out). The family isn't dead — it's the *specification* that failed.
    - **What we know from SmaRegime720 (2026-04-30):** Lengthening to SMA720 (≈30d) and adding a slope gate (`sma720 > sma720.shift(24)`) eliminated most whipsaw — 6 trades vs 90 for TrendFilter200, MDD 0.30% vs 4.22%, first positive total return (+0.80%) in the bear window. Closed-trade Calmar was 28.96 — best result so far. BUT: sample is only 6 trades (1 winner at +10.98%, 5 losers). Thin evidence. Bull-market validation pending.
    - **4h unscaled test failed** (13 trades, -1.73%, market change +25.51%): not a fair comparison — SMA720 on 4h = 120-day window, not the intended 30-day window. A fair bull test needs a 4h-scaled variant (SMA180 + slope_lookback=6) or extended 1h history.
-   - **Remaining open questions:** (a) Does the slope gate hold up at N>6? (b) Does a 4h-scaled SmaRegime720 (SMA180) work in a bull period? (c) Would an HMM regime filter improve both win rate and sample size?
+   - **SmaRegime180 bull-window result (2026-04-30):** 4h variant (SMA180, slope_lookback=6) on BTC 4h, Feb 2024 → Apr 2026 (includes 2024–2025 bull). 32 trades, Calmar (CT) 8.68, SQN 1.02, Profit Factor 2.72, CAGR +2.83%, MDD 1.74%, win rate 21.9%. Bear sub-window alone: Calmar 6.59, 5 trades, SQN 0.33. **H7 PASS** — positive Calmar in both windows. Slope gate confirmed as a whipsaw suppressor across both regimes.
+   - **Remaining open questions:** (a) Do post-cost metrics remain positive? (Estimated ~2.24% fee drag vs 6.33% gross — see Scoring note.) (b) Would an HMM regime filter improve win rate from ~22% to ~40%+ while preserving low MDD?
    - **What we know from HMM papers:** A Wasserstein HMM (arXiv 2603.04441) achieves Sharpe 2.18 vs SPX 1.18. 4-state NH-HMM on Bitcoin 2024–2026 outperforms standard 2-state HMM (Preprints.org 202603.0831) — likely {low-vol bull, high-vol bull, low-vol bear, high-vol bear}.
    - **Implication:** Build 4-state NH-HMM (not 2-state), use Bayesian posterior at P(bull) > 0.65, add 24h realised-vol as the transition covariate.
    - **Next test:** (a) `SmaRegime180` on 4h for bull-window validation — one-file change, confirms or refutes the slope-gate approach at scale; (b) then 4-state NH-HMM via `hmmlearn` GaussianHMM(n_components=4) on rolling 500h returns + log-volume.
@@ -73,12 +78,13 @@ Explain the mechanism, not just the metric — so we don't re-explore variants.
 
 Updated 2026-04-30.
 
-1. **Bull-window validation for SmaRegime720.** Create `SmaRegime180.py` — identical logic, `SMA_PERIOD=180`, `SLOPE_LOOKBACK=6` (same 30d / 24h time-equivalent on 4h bars). Backtest on BTC/USDC:USDC 4h (May 2024 → Apr 2026, includes the 2024–2025 bull run). Per H7: require positive closed-trade Calmar in both bear AND bull windows before further investment in this strategy family.
-2. **Fix prior leaderboard entries.** Re-run `LongOnlyStrategy` and `TrendFilter200` to get closed-trade Calmar (not daily-wallet-balance). Update the leaderboard table footnote once done.
-3. **4-state NH-HMM regime filter.** If `SmaRegime180` validates, then try replacing the SMA gate with an HMM posterior. Uses `hmmlearn` GaussianHMM(n_components=4), features = rolling 500h returns + log-volume, enter at P(bull-state) > 0.65. This is the highest-quality regime signal the papers support.
-4. **Funding-rate carry.** Separate infrastructure track: add a funding-rate history collector to `scripts/download_hyperliquid.py` (hit `/info` funding history endpoint), then implement threshold-gated carry. Lower priority than confirming the regime filter family.
-5. **Expand data** (deferred). Add more pairs / timeframes once a strategy demands it.
-6. **Profile** (deferred). "Make backtesting faster" is unverified as a bottleneck — don't optimise prematurely.
+1. **Fee modeling — immediate.** Add Hyperliquid taker fee (~0.035%) to `user_data/config.json` (`fee` key in exchange config). Re-run `SmaRegime180` to get post-cost Calmar and SQN. If post-cost Calmar drops below 2.0 or SQN below 0.5, the SMA family needs a higher-frequency filter (fewer but larger trades) before live consideration.
+2. **4-state NH-HMM regime filter.** `SmaRegime180` passes H7 but win rate is only 22% and Sharpe 0.14. Replace the SMA slope gate with a 4-state HMM posterior: `hmmlearn` GaussianHMM(n_components=4), features = rolling 500h returns + log-volume, enter at P(bull-state) > 0.65. Compare Calmar, SQN, and win rate directly against `SmaRegime180`.
+3. **Funding-rate carry infrastructure.** Add funding-rate history collector to `scripts/download_hyperliquid.py` (hit `/info` funding history endpoint), implement threshold-gated carry. Separate from regime filter track.
+4. **Expand data** (deferred). Add more pairs / timeframes once a strategy demands it.
+5. **Profile** (deferred). "Make backtesting faster" is unverified as a bottleneck — don't optimise prematurely.
+
+**Done (2026-04-30):** H7 bull-window validation for the slope-gate SMA family (SmaRegime180 passes). Prior leaderboard entries corrected with closed-trade Calmar. Leaderboard expanded with SQN and Profit Factor columns.
 
 ---
 
