@@ -22,7 +22,7 @@ This file is the self-correction mechanism for the project. Entries in `Ruled Ou
 - **5000 candles is plenty for longer timeframes.** 1h = ~208 days, 4h = ~833 days, 1d = essentially the full life of the exchange. Only sub-hour strategies hit the constraint.
 
 ### Scoring
-- **Primary metric is Calmar ratio (CAGR / MDD).** Sharpe is always displayed alongside as a sanity check — a high-Calmar / low-Sharpe strategy is usually a lucky tail, not a real edge. Decided 2026-04-24; do not score-shop mid-project.
+- **Primary metric is Calmar (closed trades).** Freqtrade reports two Calmar values: "closed trades" (correct — based on trade return distribution only) and "daily wallet balance" (misleading for sparse strategies — includes flat cash days with 0% return, dragging the mean negative even when closed-trade profit is positive). Use closed-trades Calmar as the primary metric. Sharpe (closed trades) displayed alongside as sanity check. Confirmed 2026-04-30; prior leaderboard entries used daily-wallet-balance Calmar and are marked n/a¹ in the table until re-run.
 
 ---
 
@@ -40,10 +40,13 @@ Ordered by how much the answer would change what we do next. Each should have a 
    - **What we know:** Funding rates on BTC perps (Binance, Bybit) are one-step-ahead predictable via DAR models but predictability is time-varying (Inan 2025). Roughly 60% of apparent DEX carry is eaten by transaction costs + spread reversals (Zhivkov 2026). **NEW (Aug 2025):** Empirical carry-only strategies on DEX perps (Drift, ApolloX) yield extremely high Sharpe ratios (23.55, 6.50) vs. negative on CEX (Binance −7.34, Bitmex −7.93) over the same period; DEX carry exhibits *no correlation* with spot HODL — pure diversifier (see `dex-carry-funding-rate-arbitrage-2025.md`). The CEX negativity confirms that our bear-market test window compressed CEX funding rates; DEX venues retained premia due to less-sophisticated arbitrage. A carry strategy therefore needs: (a) minimum funding-rate threshold (≥20–25 bps per 8h per Zhivkov), (b) DAR forecast confirming persistence (Inan), (c) DEX venue preference over CEX for Sharpe. Leverage on carry raises risk non-linearly; test unleveraged first.
    - **Test:** implement a funding-rate threshold + DAR-direction gated carry strategy. Requires adding funding-rate data fetching to `scripts/download_hyperliquid.py` (Hyperliquid API exposes current funding rate; build a collector). Then backtest with and without DAR gate; compare Sharpe/Calmar.
    - **Search:** Hyperliquid-specific fee schedule and taker cost; open-interest imbalance or liquidation-cascade signals as carry-timing overlays — still open.
-5. **Can a regime filter work on crypto at all, given the `TrendFilter200` failure?** The naive 1h SMA200 cross-up failed (see Ruled Out). The family isn't dead — it's the *specification* that failed. Open question whether any of: (a) longer regime window (1h SMA720 ≈ 30d), (b) slope-confirmed entries (`sma.diff(24) > 0`), (c) higher-timeframe agreement (daily SMA200 filtering 1h execution), (d) probabilistic regime via HMM, fixes the whipsaw problem.
-   - **What we know:** A Wasserstein HMM on a cross-asset daily universe achieves Sharpe 2.18 vs SPX 1.18 and MDD −5.43% vs −14.62% (arXiv 2603.04441). **NEW (Mar 2026):** Non-homogeneous HMM (NH-HMM) with Bayesian estimation on Bitcoin 2024–2026 outperforms standard 2-state HMM; a **4-state** model wins on BIC — likely {low-vol bull, high-vol bull, low-vol bear, high-vol bear}. Adding transition-probability covariates (volume, VIX, on-chain) materially improves regime forecasting in crisis periods (see `hmm-regime-detection-bitcoin-2026.md`).
-   - **Implication for (d):** Build 4-state NH-HMM (not 2-state), use Bayesian posterior for probabilistic entry at P(bull) > 0.65, add 24h realised-vol as the transition covariate.
-   - **Test:** implement (a) first — cheapest change, same file. Then the 4-state NH-HMM — replace SMA filter with `hmmlearn` GaussianHMM(n_components=4) on rolling 500h returns + log-volume, enter when P(identified-bull-state) > 0.65. (c) needs daily data downloaded.
+5. **Can a regime filter work on crypto at all, given the `TrendFilter200` failure?** The naive 1h SMA200 cross-up failed (see Ruled Out). The family isn't dead — it's the *specification* that failed.
+   - **What we know from SmaRegime720 (2026-04-30):** Lengthening to SMA720 (≈30d) and adding a slope gate (`sma720 > sma720.shift(24)`) eliminated most whipsaw — 6 trades vs 90 for TrendFilter200, MDD 0.30% vs 4.22%, first positive total return (+0.80%) in the bear window. Closed-trade Calmar was 28.96 — best result so far. BUT: sample is only 6 trades (1 winner at +10.98%, 5 losers). Thin evidence. Bull-market validation pending.
+   - **4h unscaled test failed** (13 trades, -1.73%, market change +25.51%): not a fair comparison — SMA720 on 4h = 120-day window, not the intended 30-day window. A fair bull test needs a 4h-scaled variant (SMA180 + slope_lookback=6) or extended 1h history.
+   - **Remaining open questions:** (a) Does the slope gate hold up at N>6? (b) Does a 4h-scaled SmaRegime720 (SMA180) work in a bull period? (c) Would an HMM regime filter improve both win rate and sample size?
+   - **What we know from HMM papers:** A Wasserstein HMM (arXiv 2603.04441) achieves Sharpe 2.18 vs SPX 1.18. 4-state NH-HMM on Bitcoin 2024–2026 outperforms standard 2-state HMM (Preprints.org 202603.0831) — likely {low-vol bull, high-vol bull, low-vol bear, high-vol bear}.
+   - **Implication:** Build 4-state NH-HMM (not 2-state), use Bayesian posterior at P(bull) > 0.65, add 24h realised-vol as the transition covariate.
+   - **Next test:** (a) `SmaRegime180` on 4h for bull-window validation — one-file change, confirms or refutes the slope-gate approach at scale; (b) then 4-state NH-HMM via `hmmlearn` GaussianHMM(n_components=4) on rolling 500h returns + log-volume.
    - **Search:** crypto-specific 1h/4h HMM validation with Calmar — daily Bitcoin validation found, intraday still open.
 6. **Does the CEX → Hyperliquid (DEX) funding-rate lead time create an exploitable signal?** Zhivkov (2026) shows Granger causality runs CEX→DEX with zero reverse; the lead is measured in minutes on 1-min data. At 1h frequency this lag may be fully collapsed, but on 15m or 5m data a CEX (Binance) funding-rate signal might lead Hyperliquid by 1–3 bars.
    - **Test:** download Binance BTC funding rate at high frequency and correlate with Hyperliquid funding rate lags using Granger test. Determine if lead persists at 15m or 1h.
@@ -68,12 +71,14 @@ Explain the mechanism, not just the metric — so we don't re-explore variants.
 
 ## What the Next Experiments Should Prioritise
 
-Updated 2026-04-24. Baseline is verified (`LongOnlyStrategy` on 1h BTC/USDC:USDC, ~200 days, -0.89% / placeholder). Real work hasn't started yet.
+Updated 2026-04-30.
 
-1. **Pick a real strategy.** `LongOnlyStrategy` is a placeholder SMA cross — not a signal, just a smoke test. Replace with a strategy whose thesis we can actually evaluate on Calmar + Sharpe.
-2. **Expand data.** Add more pairs / timeframes to `scripts/download_hyperliquid.py` invocations once a strategy demands it. Consider a cron that re-runs daily so we accrete deep history at sub-hour timeframes.
-3. **Profile only if a real sweep is slow.** The "make backtesting faster" goal from the project brief is still unverified — don't optimise prematurely.
-4. **Live-trading readiness** (separate track): only relevant once backtest results are trustworthy.
+1. **Bull-window validation for SmaRegime720.** Create `SmaRegime180.py` — identical logic, `SMA_PERIOD=180`, `SLOPE_LOOKBACK=6` (same 30d / 24h time-equivalent on 4h bars). Backtest on BTC/USDC:USDC 4h (May 2024 → Apr 2026, includes the 2024–2025 bull run). Per H7: require positive closed-trade Calmar in both bear AND bull windows before further investment in this strategy family.
+2. **Fix prior leaderboard entries.** Re-run `LongOnlyStrategy` and `TrendFilter200` to get closed-trade Calmar (not daily-wallet-balance). Update the leaderboard table footnote once done.
+3. **4-state NH-HMM regime filter.** If `SmaRegime180` validates, then try replacing the SMA gate with an HMM posterior. Uses `hmmlearn` GaussianHMM(n_components=4), features = rolling 500h returns + log-volume, enter at P(bull-state) > 0.65. This is the highest-quality regime signal the papers support.
+4. **Funding-rate carry.** Separate infrastructure track: add a funding-rate history collector to `scripts/download_hyperliquid.py` (hit `/info` funding history endpoint), then implement threshold-gated carry. Lower priority than confirming the regime filter family.
+5. **Expand data** (deferred). Add more pairs / timeframes once a strategy demands it.
+6. **Profile** (deferred). "Make backtesting faster" is unverified as a bottleneck — don't optimise prematurely.
 
 ---
 

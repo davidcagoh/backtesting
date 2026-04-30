@@ -2,9 +2,9 @@
 
 Crypto strategy backtesting setup built on [Freqtrade](https://www.freqtrade.io/en/stable/), targeting Hyperliquid (USDC-quoted) markets. Revived 2026-04 as a possible base for actively trading personal crypto holdings.
 
-**Last updated:** 2026-04-26
+**Last updated:** 2026-04-30
 
-**Current state:** Automated research loop live. Weekly paper-search agent (`trig_013s3hXkiYrSnYh2Qes1KPws`, Sun 04:00 ET) scheduled and verified end-to-end on 2026-04-24 — it reads `wiki/learnings.md` priorities, writes to `wiki/papers/`, updates `wiki/learnings.md` with narrowed next-round priorities, commits and pushes. Two strategies on the leaderboard so far; both losing, but `TrendFilter200` is ruled out with refinement path recorded. No "good" strategy yet.
+**Current state:** Automated research loop live. Weekly paper-search agent (`trig_013s3hXkiYrSnYh2Qes1KPws`, Sun 04:00 ET) scheduled and verified end-to-end on 2026-04-24 — it reads `wiki/learnings.md` priorities, writes to `wiki/papers/`, updates `wiki/learnings.md` with narrowed next-round priorities, commits and pushes. Three strategies on the leaderboard; `SmaRegime720` is the first to show positive total return (+0.80%) and closed-trade Calmar (28.96) in a bear window, but the sample is thin (6 trades) and bull-market validation is pending. Two metric notes: (1) Calmar (daily wallet balance) is misleading for sparse strategies — use closed-trade Calmar going forward; (2) any strategy with positive Calmar in the bear window still needs a bull-window test (H7) before live consideration.
 
 ---
 
@@ -40,14 +40,19 @@ Research summaries added by the weekly paper-search agent. Sorted newest-first. 
 
 ## Strategy Leaderboard
 
-Primary sort: **Calmar** (CAGR / |MDD|). Sharpe is always shown as a sanity check. Higher is better on both. See `wiki/decisions/003-baseline-eval.md` for the evaluation baseline.
+Primary sort: **Calmar (closed trades)** (CAGR / |MDD|, computed on closed-trade returns only). Sharpe (closed trades) shown as sanity check. Prior entries used daily-wallet-balance Calmar — see note below. See `wiki/decisions/003-baseline-eval.md` for the evaluation baseline.
 
-| Strategy | Calmar | Sharpe | CAGR | MDD | Trades | Data | Report |
+| Strategy | Calmar (CT) | Sharpe (CT) | CAGR | MDD | Trades | Data | Report |
 |---|---:|---:|---:|---:|---:|---|---|
-| `LongOnlyStrategy` (placeholder SMA cross) | -4.55 | -0.36 | -1.61% | 1.86% | 49 | BTC 1h, 2025-10-06 → 2026-04-24 | — |
-| `TrendFilter200` (1h SMA200 regime filter) | -6.84 | -2.54 | -5.44% | 4.22% | 90 | BTC 1h, 2025-10-06 → 2026-04-24 | [2026-04-24](results/2026-04-24-trend-filter-200.md) |
+| `SmaRegime720` (1h SMA720 + slope gate) | **28.96** | 0.20 | +1.66% | 0.30% | 6 | BTC 1h, 2025-10-29 → 2026-04-24 | [2026-04-30](results/2026-04-30-sma-regime-720.md) |
+| `LongOnlyStrategy` (placeholder SMA cross) | n/a¹ | n/a¹ | -1.61% | 1.86% | 49 | BTC 1h, 2025-10-06 → 2026-04-24 | — |
+| `TrendFilter200` (1h SMA200 regime filter) | n/a¹ | n/a¹ | -5.44% | 4.22% | 90 | BTC 1h, 2025-10-06 → 2026-04-24 | [2026-04-24](results/2026-04-24-trend-filter-200.md) |
 
-**Benchmark (buy-and-hold):** market change -37.20% on the same window. Every strategy tested so far beats buy-and-hold by a lot, but none of them are actually *good* — the baseline is a bear market, so a zero-activity strategy would score highly too.
+¹ Prior entries recorded daily-wallet-balance Calmar (-4.55 and -6.84 respectively). Re-run with `--export trades` to get closed-trade Calmar.
+
+**Benchmark (buy-and-hold):** market change -37.20% on the same Oct 2025–Apr 2026 window. Every strategy beats buy-and-hold by a lot, but the baseline is a sustained bear — a zero-activity (flat) strategy would also score highly. Any strategy with positive Calmar here still needs a bull-window test (H7) before live consideration.
+
+**Metric note:** Freqtrade's "Calmar (daily wallet balance)" penalises sparse strategies by including zero-return flat/cash days in the distribution. Use "Calmar (closed trades)" going forward. CT = closed trades.
 
 Rows added here whenever a new strategy is backtested. Link the Report column to the relevant `wiki/results/<date>-<strategy>.md` file.
 
