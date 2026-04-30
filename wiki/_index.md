@@ -11,6 +11,8 @@ Crypto strategy backtesting setup built on [Freqtrade](https://www.freqtrade.io/
 ## Contents
 
 - [learnings.md](learnings.md) — confirmed facts, open hypotheses, ruled-out directions, search priorities
+- `reference/`
+  - [strategy-archetypes.md](reference/strategy-archetypes.md) — canonical reference: 7 strategy archetypes from IMC Prosperity podium writeups, annotated with current project state. Stable reference; findings live in `results/` and `learnings.md`.
 - `decisions/`
   - [001-drop-external-data-repo.md](decisions/001-drop-external-data-repo.md) — removed the `freqtrade_hyperliquid_download-data` gitlink
   - [002-hyperliquid-deep-history.md](decisions/002-hyperliquid-deep-history.md) — accept the 5000-candle API cap; reconstruct from S3 only if needed

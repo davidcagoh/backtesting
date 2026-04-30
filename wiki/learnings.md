@@ -6,6 +6,10 @@ This file is the self-correction mechanism for the project. Entries in `Ruled Ou
 
 ---
 
+**Reference:** `wiki/reference/strategy-archetypes.md` — canonical taxonomy of 7 strategy types (market making, stat arb, mean reversion, options, order flow, cross-exchange arb), each with signal logic, key parameters, known failure modes, and friction adjustments. Annotated with current project state. The meta failure-modes table there tracks which universal risks (transaction cost blindness, regime change, overfitting) are open vs addressed in this project.
+
+---
+
 ## Confirmed Facts
 
 ### Infrastructure
