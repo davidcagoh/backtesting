@@ -5,11 +5,10 @@
 This is a crypto strategy backtesting setup built on [Freqtrade](https://www.freqtrade.io/en/stable/). Mostly a wrapper repo: real work lives in two git-linked subprojects.
 
 - `freqtrade/` — clone of the Freqtrade starter. Strategies, config, CLI.
-- `freqtrade_hyperliquid_download-data/` — external OHLCV dump for Hyperliquid (Freqtrade has no built-in Hyperliquid downloader). Feather format, under `user_data/data/hyperliquid/`.
 - `notes.md` — the canonical backtest command and Hyperliquid quirks (USDC quote, pair lists in `data_content_{spot,futures}.txt`).
-- `wiki/` — project knowledge base. Read `wiki/_index.md` and `wiki/learnings.md` before substantive work; update them when facts change.
+- `wiki/` — project knowledge base. Read `wiki/_index.md` and `wiki/learnings.md` before substantive work; update them when facts change. `wiki/reference/` holds stable canonical references (e.g. strategy-archetypes.md).
 
-**Current state (2026-04-24):** freqtrade cloned fresh from upstream and installed in `freqtrade/.venv`. Baseline backtest verified end-to-end: 5001 rows of 1h BTC/USDC:USDC, 49 trades over ~200 days, placeholder `LongOnlyStrategy` lost 0.89%. Goal of the current revisit was "make backtesting faster" — but initial runs are already fast; re-evaluate only with real strategies / larger sweeps. See `wiki/learnings.md`.
+**Current state (2026-04-30):** Four strategies on the leaderboard. `SmaRegime180` (4h SMA180 + slope gate) passes H7 bull-window validation — positive Calmar (CT) in both bear (6.59) and full bull+bear window (8.68), 32 trades. Next: add Hyperliquid taker fee (~0.035%) to config and re-run post-cost, then NH-HMM regime filter. Leaderboard now uses SQN + Profit Factor as co-primary metrics alongside Calmar. All backtests currently use zero fees — see `wiki/learnings.md` Scoring. See `wiki/_index.md` leaderboard for current rankings.
 
 **Data sourcing:** Freqtrade's `download-data` is **disabled** for Hyperliquid (`ohlcv_has_history=False`) and Hyperliquid publishes no bulk OHLCV. Use `scripts/download_hyperliquid.py` — it hits `/info candleSnapshot` directly and writes Feather in freqtrade's layout. Hard cap: 5000 candles per (pair, timeframe). See `wiki/decisions/002`.
 
