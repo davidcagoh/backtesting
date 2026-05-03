@@ -65,6 +65,15 @@ Ordered by how much the answer would change what we do next. Each should have a 
    - **What this means here:** All our backtests are from Oct 2025 → Apr 2026, a sustained BTC bear (−37.20% buy-and-hold). Any strategy that avoids long exposure looks good purely because the regime rewarded flatness or shorts. A strategy with positive Calmar in this window may flip negative once BTC recovers.
    - **Test:** for any strategy with Calmar > 0 in the current test window, backtest over a bull sub-window using 4h data (~833 days available via `scripts/download_hyperliquid.py`). Require the strategy to show positive risk-adjusted return in BOTH regimes before moving to live consideration.
    - **Benchmark fix:** when adding new results to the leaderboard, report *benchmark-relative Calmar* (strategy Calmar minus buy-and-hold Calmar for the same period) as an additional column to reduce regime carry-over flattery.
+8. **Does a SaR proxy (bid-ask spread × depth imbalance from Hyperliquid L2 book) predict liquidation cascade risk and correlate with adverse funding drag?** Sepper 2026 (arXiv 2603.09164) shows SaR spikes before the Oct 2025 cascade. 85% of our funding drag falls on winning trades during bull-run periods — exactly when OI and leverage are high. If high-SaR periods precede funding spikes, adding a LOB-depth check as a "pause carry" condition could improve post-cost Calmar.
+   - **Test:** download Hyperliquid L2 book snapshots (`/info l2Book`) during historical high-funding periods; correlate top-5 ask depth with next-period funding rate change. If correlation > 0.3, prototype a SaR proxy filter.
+   - **Search:** papers combining LOB depth with funding-rate prediction on perp venues.
+9. **Does adding a `funding_aligned` feature improve NH-HMM state separation?** Badawi 2025 (arXiv 2601.06084) documents that funding/4h-trend alignment predicts expansion vs. compression regimes. Our planned NH-HMM uses returns + log-volume. Adding a binary `funding_aligned` covariate (sign of funding agrees with 4h SMA slope) may improve bull-state recall without hurting precision.
+   - **Test:** compare NH-HMM(features=[returns, log-vol]) vs. NH-HMM(features=[returns, log-vol, funding_aligned]) on held-out 2025 data. Measure: bull-state precision, bear-state precision, and regime-conditional Calmar.
+   - **Dependency:** requires funding-rate history download (already planned as Experiment #2).
+10. **Is the 1h-4h range the right mean-reversion horizon for BTC on Hyperliquid, or does the transition zone shift with volatility regime?** Safari & Schmidhuber 2025 (arXiv 2501.16772) show the reversion-to-trending transition occurs in the 1–4h range broadly, but note crypto may differ due to higher retail participation. The transition boundary may compress to 15–30 min in high-vol regimes and expand to 4–8h in low-vol regimes.
+    - **Test:** measure 1h BTC return autocorrelation (lag-1) separately during HMM bull-state vs. bear-state periods. If autocorrelation sign differs by regime, mean-reversion strategy should be state-conditional.
+    - **Search:** papers on regime-conditional autocorrelation in crypto 1h returns.
 
 ---
 
@@ -96,22 +105,23 @@ Updated 2026-05-03.
 
 ## What the Next Paper Search Should Prioritise
 
-Updated 2026-04-26. This section is the source text for the weekly paper-search agent's prompt — keep it current.
+Updated 2026-05-03. This section is the source text for the weekly paper-search agent's prompt — keep it current.
 
 **Do NOT search for:**
 - Hyperliquid bulk OHLCV sources or historical data archives (ruled out above — none exist).
 - Generic SMA-cross or RSI-cross strategy papers — these are baseline noise, not research.
 - General funding-rate carry papers at the "naive always-on carry" level — we already know DEX carry exists and is profitable in isolation (Drift Sharpe 23.55, Aug 2025). Search only for papers that address *conditional* carry (threshold-gated, rate-predicted, or cost-adjusted) or that quantify Hyperliquid-specific carry costs.
 - HMM papers on equity or FX markets — daily Bitcoin-specific NH-HMM validation is now in hand (Preprints.org 202603.0831). Do NOT search for more daily-frequency HMM papers unless they report 1h or 4h results.
+- General slippage/execution papers on equity markets or CEX spot — we need perp-specific or Hyperliquid-specific studies only. Slippage at the SaR methodology level (Sepper 2026, arXiv 2603.09164) is now found; don't re-search this angle.
 
 **Priority 1 — Funding-rate carry on DEX perps: Hyperliquid-specific threshold (NARROWED further).**
-We now have strong empirical backing that DEX carry is profitable (Sharpe 23.55 on Drift, ~zero correlation with spot, Aug 2025). The remaining open question is narrow: what is the exact break-even funding-rate threshold on *Hyperliquid specifically*, accounting for (a) Hyperliquid's taker fee schedule, (b) the funding interval (8h), and (c) the DAR forecast uncertainty window? Search for: Hyperliquid fee structure publications; open-interest imbalance or liquidation-cascade signals as carry-timing overlays; any study combining funding-rate forecasting (DAR) with carry threshold gating.
+We now have: (a) empirical backing that DEX carry is profitable (Drift Sharpe 23.55, Aug 2025), (b) the carry timing principle — funding aligned with 4h context expands, funding divergent compresses (Badawi 2025, arXiv 2601.06084), (c) DAR predictability of next-period rate (Inan 2025, SSRN 5576424). The remaining open question: compute the *actual* break-even funding-rate threshold on Hyperliquid accounting for taker fee (0.035%/side) + DAR uncertainty window. Search for: Hyperliquid-specific fee schedule updates; papers that backtest threshold-gated carry with DAR forecasts on perp venues and report Calmar or Sharpe by threshold level.
 
-**Priority 2 — Regime detection for 24/7 markets: intraday validation still open (NARROWED).**
-Daily Bitcoin HMM validation is found (4-state NH-HMM, Preprints.org 202603.0831). The remaining gap: does an NH-HMM trained on *1h or 4h* crypto data produce actionable regime labels? Search for: (a) papers that apply HMM/regime-switching directly to crypto *intraday* (1h, 4h) data and report regime-conditional Calmar or Sharpe; (b) papers on feature selection for HMM transition covariates in crypto (volume, funding rate as covariates).
+**Priority 2 — Regime detection: intraday HMM with quantitative performance results (NARROWED).**
+We have: daily 4h Bitcoin NH-HMM validation (Preprints 202603.0831), Wasserstein HMM technique (arXiv 2603.04441), and a candidate covariate — funding/4h-context alignment (Badawi 2025, arXiv 2601.06084). The remaining gap: a paper reporting *regime-conditional Calmar or Sharpe* on 1h or 4h crypto data. Search for: (a) NH-HMM or MSGARCH papers on crypto intraday that include a strategy backtest with Calmar/Sharpe; (b) any paper using funding rate or OI imbalance as an explicit HMM transition covariate and quantifying the improvement in regime purity or strategy performance.
 
-**Priority 3 — Backtest-realistic execution on perps (OPEN — slippage sub-component).**
-The backtest-vs-live divergence angle is now addressed (Liu 2026, arXiv 2604.18821): backtests reflect regime at launch, not skill. The remaining gap is the *execution model* gap: Freqtrade's default backtest assumes zero slippage. Search for: empirical slippage studies on Hyperliquid or similar on-chain perp venues (order-book depth, taker impact, spread costs); papers comparing Freqtrade or similar backtester assumed fills vs. actual fill quality on perps.
+**Priority 3 — Backtest-realistic execution on perps (SUBSTANTIALLY ADDRESSED — residual gap).**
+Slippage on Hyperliquid is now addressed: Sepper 2026 (arXiv 2603.09164) provides SaR metrics from real Hyperliquid order-book data; Liu 2026 (arXiv 2604.18821) addresses regime-driven backtest inflation. Residual gap: does Freqtrade's T+0 fill assumption materially inflate Calmar vs. T+1 execution? Search for: papers quantifying the specific Calmar/Sharpe impact of T+0 vs. T+1 fill semantics for daily-to-weekly holding strategies on perps (not HFT). If nothing found after 2 search cycles, close this priority.
 
-**Priority 4 — Mean-reversion at 1h–4h timeframes in crypto majors (OPEN — unchanged).**
-Our baseline data is 1h and 4h. Search for crypto-specific evidence on mean-reversion horizons and whether the retail-overreaction mechanism that drives it in Chinese A-shares has a crypto analogue (likely yes — retail-heavy, 24/7, high leverage). No strong paper found yet — this priority is unchanged. Also search for: crypto intraday momentum reversal (within 1–4h), short-horizon mean-reversion after funding-rate extremes.
+**Priority 4 — Mean-reversion at 1h–4h timeframes in crypto majors (NARROWED — implementation gap).**
+We now have structural evidence: markets revert sub-hour and trend at hours-to-years (Safari & Schmidhuber 2025, arXiv 2501.16772), and the 4h funding-divergence mechanism provides a mean-reversion trigger (Badawi 2025, arXiv 2601.06084). The remaining gap is implementation-level: a Calmar-validated crypto mean-reversion strategy at 1h granularity. Search for: (a) crypto intraday mean-reversion backtests with Calmar ≥ 2 at 1h frequency; (b) short-horizon reversal after funding-rate extremes on BTC perps with quantified Sharpe/Calmar; (c) order-flow imbalance (OFI) as a 1h mean-reversion signal in crypto perps.
