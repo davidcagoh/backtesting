@@ -30,7 +30,8 @@ This file is the self-correction mechanism for the project. Entries in `Ruled Ou
 - **Also track: Profit Factor and Expectancy.** Profit Factor (gross profit / gross loss) is robust to thin samples and has no N assumption. Expectancy (mean return per trade, as ratio of risk) gives a complementary view. Both are now in the leaderboard.
 - **Sharpe (closed trades) shown as sanity check.** "Daily wallet balance" Sharpe/Calmar penalises sparse strategies; don't use them for decision-making.
 - **Prior leaderboard entries confirmed 2026-04-30:** LongOnlyStrategy closed-trade Calmar -4.55 (SQN -0.53, PF 0.81); TrendFilter200 closed-trade Calmar -6.84 (SQN -2.79, PF 0.43). The table previously said "n/a¹" for these — now corrected.
-- **Transaction costs not yet modeled.** All backtests run with zero fees. Hyperliquid taker fee ~0.035% per side = ~0.07% round-trip per trade. For SmaRegime180 (32 trades) this is ~2.24% fee drag on a 6.33% gross return. Adding realistic fee config to `user_data/config.json` is a prerequisite before any live consideration.
+- **Fee correction (2026-05-03):** The original 6.33% SmaRegime180 result was NOT zero-fee. Freqtrade applied ccxt's hardcoded Hyperliquid default (0.045%/side). True zero-fee is 6.62% (Calmar 9.50). Actual Hyperliquid taker (0.035%/side): 6.39% (Calmar 8.86). **The `"fee"` key in config.json exchange block is silently ignored by the backtester — use `--fee FLOAT` CLI flag instead.**
+- **Cost modeling complete (2026-05-03).** Historical Hyperliquid BTC funding rates applied per-trade across all 32 trades (19,733 8h periods, Feb 2024 → Apr 2026). Total drag: −2.25 USDC taker fees + −12.08 USDC funding = −14.33 USDC on 66.16 USDC gross (21.7% cost ratio). Net post-all-costs: +51.83 USDC (+5.18%), estimated Calmar ~7.2. Funding is 5.4× larger than taker fees in dollar terms and adversely selected: 85% of funding drag falls on the 7 winning trades (avg hold 25.9d) during bull-run periods, including 5.27 USDC from the 67-day Oct–Dec 2024 winner. Strategy survives realistic cost modeling — Calmar remains well above 2.0 threshold.
 
 ---
 
@@ -80,13 +81,14 @@ Explain the mechanism, not just the metric — so we don't re-explore variants.
 
 ## What the Next Experiments Should Prioritise
 
-Updated 2026-04-30.
+Updated 2026-05-03.
 
-1. **Fee modeling — immediate.** Add Hyperliquid taker fee (~0.035%) to `user_data/config.json` (`fee` key in exchange config). Re-run `SmaRegime180` to get post-cost Calmar and SQN. If post-cost Calmar drops below 2.0 or SQN below 0.5, the SMA family needs a higher-frequency filter (fewer but larger trades) before live consideration.
-2. **4-state NH-HMM regime filter.** `SmaRegime180` passes H7 but win rate is only 22% and Sharpe 0.14. Replace the SMA slope gate with a 4-state HMM posterior: `hmmlearn` GaussianHMM(n_components=4), features = rolling 500h returns + log-volume, enter at P(bull-state) > 0.65. Compare Calmar, SQN, and win rate directly against `SmaRegime180`.
-3. **Funding-rate carry infrastructure.** Add funding-rate history collector to `scripts/download_hyperliquid.py` (hit `/info` funding history endpoint), implement threshold-gated carry. Separate from regime filter track.
-4. **Expand data** (deferred). Add more pairs / timeframes once a strategy demands it.
-5. **Profile** (deferred). "Make backtesting faster" is unverified as a bottleneck — don't optimise prematurely.
+1. **4-state NH-HMM regime filter.** Cost modeling is complete — SmaRegime180 survives at est. Calmar ~7.2 post-all-costs. Next: replace the SMA slope gate with a 4-state HMM posterior: `hmmlearn` GaussianHMM(n_components=4), features = rolling 500h returns + log-volume, enter at P(bull-state) > 0.65. Compare Calmar, SQN, and win rate directly against SmaRegime180. Target: improve win rate from 22% toward 40%+.
+2. **Funding-rate carry infrastructure.** Add funding-rate history collector to `scripts/download_hyperliquid.py` (hit `/info fundingHistory` — same endpoint used for cost analysis above). Implement threshold-gated carry strategy. Separate from regime filter track.
+3. **Expand data** (deferred). Add more pairs / timeframes once a strategy demands it.
+4. **Profile** (deferred). "Make backtesting faster" is unverified as a bottleneck — don't optimise prematurely.
+
+**Done (2026-05-03):** Full cost modeling for SmaRegime180. Discovered that original 6.33% was already fee-inclusive (ccxt default 0.045%/side, not zero-fee). Fetched 19,733 historical Hyperliquid funding rate records; applied per-trade. Net post-all-costs return +5.18%, est. Calmar ~7.2. Funding drag (1.21% portfolio) is 5.4× larger than taker fees (0.23%) and adversely selected to winning trades. Strategy survives.
 
 **Done (2026-04-30):** H7 bull-window validation for the slope-gate SMA family (SmaRegime180 passes). Prior leaderboard entries corrected with closed-trade Calmar. Leaderboard expanded with SQN and Profit Factor columns.
 

@@ -2,7 +2,7 @@
 
 Crypto strategy backtesting setup built on [Freqtrade](https://www.freqtrade.io/en/stable/), targeting Hyperliquid (USDC-quoted) markets. Revived 2026-04 as a possible base for actively trading personal crypto holdings.
 
-**Last updated:** 2026-04-30
+**Last updated:** 2026-05-03
 
 **Current state:** Automated research loop live. Weekly paper-search agent (`trig_013s3hXkiYrSnYh2Qes1KPws`, Sun 04:00 ET) scheduled and verified end-to-end on 2026-04-24 — it reads `wiki/learnings.md` priorities, writes to `wiki/papers/`, updates `wiki/learnings.md` with narrowed next-round priorities, commits and pushes. Four strategies on the leaderboard. `SmaRegime180` (4h, 32 trades, Feb 2024 → Apr 2026) passes H7 bull-window validation: positive Calmar in both bear (6.59) and full bull+bear window (8.68). Prior leaderboard Calmar entries confirmed: LongOnlyStrategy -4.55, TrendFilter200 -6.84 (both closed-trade). Key open items: (1) transaction costs not yet modeled — Hyperliquid taker ~0.035% could absorb most gains; (2) NH-HMM regime filter is the next regime-detection candidate; (3) Calmar is unreliable at N<20 — use SQN as co-primary metric.
 
@@ -47,15 +47,19 @@ Primary sort: **Calmar (closed trades)**. Co-primary: **SQN** (System Quality Nu
 | Strategy | Calmar (CT) | SQN | Profit Factor | Sharpe (CT) | CAGR | MDD | Trades | Data | Report |
 |---|---:|---:|---:|---:|---:|---:|---:|---|---|
 | `SmaRegime720` (1h SMA720 + slope gate) | **28.96**² | 0.69 | 3.68 | 0.20 | +1.66% | 0.30% | 6 | BTC 1h, bear, 2025-10-29→2026-04-24 | [2026-04-30](results/2026-04-30-sma-regime-720.md) |
-| `SmaRegime180` (4h SMA180 + slope gate) | **8.68** | 1.02 | 2.72 | 0.14 | +2.83% | 1.74% | 32 | BTC 4h, full, 2024-02-12→2026-04-24 | [2026-04-30](results/2026-04-30-sma-regime-180.md) |
+| `SmaRegime180` (4h SMA180 + slope gate) | **8.68**³ | 1.02 | 2.72 | 0.14 | +2.83% | 1.74% | 32 | BTC 4h, full, 2024-02-12→2026-04-24 | [2026-04-30](results/2026-04-30-sma-regime-180.md) |
 | `LongOnlyStrategy` (placeholder SMA cross) | -4.55 | -0.53 | 0.81 | -0.36 | -1.61% | 1.86% | 49 | BTC 1h, bear, 2025-10-06→2026-04-24 | — |
 | `TrendFilter200` (1h SMA200 regime filter) | -6.84 | -2.79 | 0.43 | -2.54 | -5.44% | 4.22% | 90 | BTC 1h, bear, 2025-10-06→2026-04-24 | [2026-04-24](results/2026-04-24-trend-filter-200.md) |
 
 ² Calmar unreliable at N=6 (SQN 0.69). SmaRegime180 (N=32, SQN 1.02) is the more meaningful data point for this family.
 
+³ Uses ccxt default 0.045%/side fee (not zero-fee as previously documented). Actual Hyperliquid taker (0.035%/side): Calmar 8.86 (+6.39%). Post-all-costs (taker + historical funding): est. Calmar ~7.2 (+5.18%). See [2026-04-30 result card](results/2026-04-30-sma-regime-180.md) for full breakdown.
+
 **H7 status:** `SmaRegime180` passes — positive Calmar in both bear-only sub-window (6.59) and full bull+bear window (8.68). The slope-gate SMA family is not ruled out. Next: cost modeling + NH-HMM comparison.
 
-**Cost warning:** All runs use zero transaction costs. Hyperliquid taker fee ~0.035% per side × 2 × 32 trades ≈ 2.24% fee drag — would substantially reduce SmaRegime180's 6.33% gross return. Re-run with fee config before any live consideration.
+**Fee correction (2026-05-03):** The original 6.33% run was NOT zero-fee — Freqtrade applied ccxt's hardcoded Hyperliquid default (0.045%/side). True zero-fee baseline is 6.62% (Calmar 9.50). Actual Hyperliquid taker (0.035%/side, via `--fee` CLI flag) gives 6.39% (Calmar 8.86). The `"fee"` key in config.json exchange block is silently ignored by the backtester.
+
+**Cost modeling complete (2026-05-03):** Historical funding rates applied per-trade (19,733 periods). Total cost: −2.25 USDC taker + −12.08 USDC funding = −14.33 USDC on 66.16 USDC gross = 21.7% drag. Net post-all-costs: +51.83 USDC (+5.18%), estimated Calmar ~7.2. Funding is 5.4× larger than taker fees and adversely selected: 85% of funding drag falls on the 7 winning trades (avg hold 25.9d) during bull-run periods. Strategy survives realistic cost modeling.
 
 **Benchmark:** market change -37.20% (bear window), +61.43% (full 4h window). Long-only trend strategies will underperform buy-and-hold in strong bulls — evaluate on risk-adjusted return (Calmar, SQN), not absolute return.
 
