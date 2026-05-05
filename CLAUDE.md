@@ -10,6 +10,10 @@ This is a crypto strategy backtesting setup built on [Freqtrade](https://www.fre
 
 **Current state (2026-05-05):** Five strategies on the leaderboard (HmmRegime4 pending backtest run). `SmaRegime180` (4h SMA180 + slope gate) is current best: post-all-costs return +5.18%, est. Calmar ~7.2. Fee gotcha: use `--fee 0.00035` CLI flag — the `"fee"` key in config.json is silently ignored by the backtester. `HmmRegime4` strategy implemented (`user_data/strategies/HmmRegime4.py`) — needs `pip install hmmlearn` then backtest run. Funding-rate history collector added to `scripts/download_hyperliquid.py` (`--funding --coins BTC`). Next: run HmmRegime4 backtest and compare vs SmaRegime180. See `wiki/_index.md` leaderboard for current rankings.
 
+**Visual leaderboard:** `README.md` at repo root embeds `wiki/assets/leaderboard.png`. Regenerate with `./freqtrade/.venv/bin/python scripts/generate_leaderboard_chart.py` — reads `wiki/_index.md` as canonical data source, pulls equity curves from backtest ZIPs. Requires `matplotlib` in the freqtrade venv (`pip install matplotlib`). `run_eval.sh` auto-calls the chart script after each baseline eval.
+
+**Venv path fix (2026-05-05):** After repo moved to `algo-traders/backtesting/`, all shebangs and the editable install were stale. Fixed by: patching `__editable___freqtrade_2026_4_dev0_finder.py` MAPPING, adding `freqtrade-src.pth` to site-packages, rewriting all bin shebangs. If the repo moves again, run: `grep -rl OLD_PATH freqtrade/.venv/bin/ | xargs sed -i '' 's|OLD|NEW|g'` and update the `.pth` and finder files.
+
 **Data sourcing:** Freqtrade's `download-data` is **disabled** for Hyperliquid (`ohlcv_has_history=False`) and Hyperliquid publishes no bulk OHLCV. Use `scripts/download_hyperliquid.py` — it hits `/info candleSnapshot` directly and writes Feather in freqtrade's layout. Hard cap: 5000 candles per (pair, timeframe). See `wiki/decisions/002`.
 
 Use the **wiki** skill (`/wiki`) to add papers, decisions, or experiment results as they come up.

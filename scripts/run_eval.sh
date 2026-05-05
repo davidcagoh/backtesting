@@ -24,3 +24,10 @@ fi
   -s LongOnlyStrategy -i 1h \
   -p BTC/USDC:USDC \
   --eps --max-open-trades 1
+
+# Regenerate leaderboard chart (non-fatal — requires: pip install matplotlib)
+PYTHON="$(dirname "$FT")/python"
+if [[ -x "$PYTHON" ]]; then
+  "$PYTHON" "$(dirname "${BASH_SOURCE[0]}")/generate_leaderboard_chart.py" \
+    || echo "Warning: chart generation failed — run: pip install matplotlib in the freqtrade venv" >&2
+fi
