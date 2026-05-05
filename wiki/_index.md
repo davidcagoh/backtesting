@@ -2,9 +2,9 @@
 
 Crypto strategy backtesting setup built on [Freqtrade](https://www.freqtrade.io/en/stable/), targeting Hyperliquid (USDC-quoted) markets. Revived 2026-04 as a possible base for actively trading personal crypto holdings.
 
-**Last updated:** 2026-05-03 (weekly paper search)
+**Last updated:** 2026-05-05
 
-**Current state:** Automated research loop live. Weekly paper-search agent (`trig_013s3hXkiYrSnYh2Qes1KPws`, Sun 04:00 ET) scheduled and verified end-to-end on 2026-04-24. Four strategies on the leaderboard. `SmaRegime180` (4h, 32 trades, Feb 2024 → Apr 2026) passes H7 bull-window validation and full cost modeling: post-all-costs return +5.18%, est. Calmar ~7.2 (taker fees + historical Hyperliquid funding rates applied per-trade). Funding drag (−12.08 USDC) is 5.4× larger than taker fees (−2.25 USDC) and adversely selected to winning trades. Key correction: original 6.33% used ccxt's default 0.045%/side — not zero-fee as previously documented. Open items: (1) 4-state NH-HMM regime filter — next priority; (2) funding-rate carry infrastructure; (3) Calmar unreliable at N<20 — SQN is co-primary.
+**Current state:** Automated research loop live. Weekly paper-search agent (`trig_013s3hXkiYrSnYh2Qes1KPws`, Sun 04:00 ET) scheduled and verified end-to-end on 2026-04-24. Four strategies on the leaderboard. `SmaRegime180` (4h, 32 trades, Feb 2024 → Apr 2026) passes H7 bull-window validation and full cost modeling: post-all-costs return +5.18%, est. Calmar ~7.2 (taker fees + historical Hyperliquid funding rates applied per-trade). Funding drag (−12.08 USDC) is 5.4× larger than taker fees (−2.25 USDC) and adversely selected to winning trades. Key correction: original 6.33% used ccxt's default 0.045%/side — not zero-fee as previously documented. **New (2026-05-05):** `HmmRegime4` strategy added (`user_data/strategies/HmmRegime4.py`) — 4-state GaussianHMM on rolling 24h log return + log-volume z-score; entry at P(bull-state)>0.65. Requires `pip install hmmlearn` in the freqtrade venv. Funding-rate history collector added to `scripts/download_hyperliquid.py` (`--funding --coins BTC`). Open items: (1) Run `HmmRegime4` backtest and compare Calmar/SQN/win-rate against `SmaRegime180`; (2) Download BTC funding history and implement threshold-gated carry strategy; (3) Calmar unreliable at N<20 — SQN is co-primary.
 
 ---
 
@@ -51,6 +51,7 @@ Primary sort: **Calmar (closed trades)**. Co-primary: **SQN** (System Quality Nu
 |---|---:|---:|---:|---:|---:|---:|---:|---|---|
 | `SmaRegime720` (1h SMA720 + slope gate) | **28.96**² | 0.69 | 3.68 | 0.20 | +1.66% | 0.30% | 6 | BTC 1h, bear, 2025-10-29→2026-04-24 | [2026-04-30](results/2026-04-30-sma-regime-720.md) |
 | `SmaRegime180` (4h SMA180 + slope gate) | **8.68**³ | 1.02 | 2.72 | 0.14 | +2.83% | 1.74% | 32 | BTC 4h, full, 2024-02-12→2026-04-24 | [2026-04-30](results/2026-04-30-sma-regime-180.md) |
+| `HmmRegime4` (4-state NH-HMM, 1h) | *pending* | *pending* | *pending* | *pending* | *pending* | *pending* | — | BTC 1h — run pending | — |
 | `LongOnlyStrategy` (placeholder SMA cross) | -4.55 | -0.53 | 0.81 | -0.36 | -1.61% | 1.86% | 49 | BTC 1h, bear, 2025-10-06→2026-04-24 | — |
 | `TrendFilter200` (1h SMA200 regime filter) | -6.84 | -2.79 | 0.43 | -2.54 | -5.44% | 4.22% | 90 | BTC 1h, bear, 2025-10-06→2026-04-24 | [2026-04-24](results/2026-04-24-trend-filter-200.md) |
 
@@ -78,7 +79,7 @@ Rows added here whenever a new strategy is backtested. Link the Report column to
 | `user_data/config.json` | Minimal Hyperliquid config (dry_run, futures/isolated, USDC stake, Feather format). No keys committed — fill `walletAddress` / `privateKey` only for live trading, not needed for backtesting. |
 | `user_data/strategies/LongOnlyStrategy.py` | SMA-cross placeholder strategy so the original `notes.md` command still runs. Replace with real logic. |
 | `user_data/data/hyperliquid/` | Where `scripts/download_hyperliquid.py` writes Feather OHLCV files (futures land under `futures/`). |
-| `scripts/download_hyperliquid.py` | Custom Hyperliquid OHLCV downloader. Required because freqtrade's built-in `download-data` is disabled for Hyperliquid. |
+| `scripts/download_hyperliquid.py` | Custom Hyperliquid OHLCV downloader + funding-rate history collector. Required because freqtrade's built-in `download-data` is disabled for Hyperliquid. Use `--funding --coins BTC` to fetch 8-hourly funding rates. Output: `user_data/data/hyperliquid/funding/<COIN>-funding.parquet`. Supports incremental updates (resumes from last saved timestamp). |
 | `notes.md` | Original crib sheet (preserved). |
 
 The old `freqtrade_hyperliquid_download-data` gitlink was removed — see `decisions/001`.

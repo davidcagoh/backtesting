@@ -90,12 +90,14 @@ Explain the mechanism, not just the metric — so we don't re-explore variants.
 
 ## What the Next Experiments Should Prioritise
 
-Updated 2026-05-03.
+Updated 2026-05-05.
 
-1. **4-state NH-HMM regime filter.** Cost modeling is complete — SmaRegime180 survives at est. Calmar ~7.2 post-all-costs. Next: replace the SMA slope gate with a 4-state HMM posterior: `hmmlearn` GaussianHMM(n_components=4), features = rolling 500h returns + log-volume, enter at P(bull-state) > 0.65. Compare Calmar, SQN, and win rate directly against SmaRegime180. Target: improve win rate from 22% toward 40%+.
-2. **Funding-rate carry infrastructure.** Add funding-rate history collector to `scripts/download_hyperliquid.py` (hit `/info fundingHistory` — same endpoint used for cost analysis above). Implement threshold-gated carry strategy. Separate from regime filter track.
+1. **Run HmmRegime4 backtest.** Strategy is implemented at `user_data/strategies/HmmRegime4.py`. Steps: (a) `pip install hmmlearn` in the freqtrade venv; (b) run backtest on BTC 1h bear window with `--fee 0.00035`; (c) compare Calmar, SQN, win-rate against SmaRegime180 (target: win rate from 22% toward 40%+). Note look-ahead caveat in strategy docstring — treat result as upper bound on HMM signal quality.
+2. **Funding-rate carry strategy.** Collector is implemented (`scripts/download_hyperliquid.py --funding --coins BTC`). Next: fetch funding history, then implement threshold-gated carry strategy (minimum rate ≥20–25 bps/8h, DAR-direction gate). Separate track from regime filter.
 3. **Expand data** (deferred). Add more pairs / timeframes once a strategy demands it.
 4. **Profile** (deferred). "Make backtesting faster" is unverified as a bottleneck — don't optimise prematurely.
+
+**Done (2026-05-05):** `HmmRegime4` strategy implemented (`user_data/strategies/HmmRegime4.py`). 4-state GaussianHMM on rolling 24h log return + log-volume z-score; entry at P(bull-state)>0.65, exit at P(bull-state)<0.45. Requires `pip install hmmlearn`. Funding-rate history collector added to `scripts/download_hyperliquid.py` (`--funding --coins BTC ETH`); writes `user_data/data/hyperliquid/funding/<COIN>-funding.parquet` with incremental-update support. **Next:** install hmmlearn and run `HmmRegime4` backtest on BTC 1h (bear window), then compare Calmar/SQN/win-rate against SmaRegime180.
 
 **Done (2026-05-03):** Full cost modeling for SmaRegime180. Discovered that original 6.33% was already fee-inclusive (ccxt default 0.045%/side, not zero-fee). Fetched 19,733 historical Hyperliquid funding rate records; applied per-trade. Net post-all-costs return +5.18%, est. Calmar ~7.2. Funding drag (1.21% portfolio) is 5.4× larger than taker fees (0.23%) and adversely selected to winning trades. Strategy survives.
 
