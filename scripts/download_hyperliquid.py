@@ -167,13 +167,14 @@ def fetch_funding_history(coin: str, start_ms: int | None = None) -> list[dict]:
     all_records: list[dict] = []
 
     while cursor_ms < now_ms:
+        # Note: fundingHistory takes flat fields, NOT a `req` wrapper (unlike
+        # candleSnapshot). Hyperliquid changed/diverged this endpoint at some
+        # point — wrapping in `req` returns HTTP 422.
         payload = {
             "type": "fundingHistory",
-            "req": {
-                "coin": coin,
-                "startTime": cursor_ms,
-                "endTime": now_ms,
-            },
+            "coin": coin,
+            "startTime": cursor_ms,
+            "endTime": now_ms,
         }
         resp = requests.post(API_URL, json=payload, timeout=30)
         resp.raise_for_status()
@@ -188,6 +189,7 @@ def fetch_funding_history(coin: str, start_ms: int | None = None) -> list[dict]:
         cursor_ms = last_ts + 1
         if len(page) < FUNDING_PAGE_SIZE:
             break  # partial page → last page
+        time.sleep(0.2)  # be nice to the API; avoid 429 on long histories
 
     return all_records
 

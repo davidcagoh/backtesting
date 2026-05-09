@@ -90,7 +90,7 @@ def parse_leaderboard(content):
         })
 
     # Parse post-cost Calmar from footnote body
-    pc_m = re.search(r"est\.\s*Calmar\s*[~≈]\s*([0-9.]+)", content)
+    pc_m = re.search(r"est\.\s*Calmar\s*[~≈]\s*(\d+(?:\.\d+)?)", content)
     if pc_m:
         pc_val = float(pc_m.group(1))
         # Attribute to the strategy whose raw Calmar matches the ³-footnoted value (SmaRegime180)

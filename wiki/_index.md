@@ -2,9 +2,9 @@
 
 Crypto strategy backtesting setup built on [Freqtrade](https://www.freqtrade.io/en/stable/), targeting Hyperliquid (USDC-quoted) markets. Revived 2026-04 as a possible base for actively trading personal crypto holdings.
 
-**Last updated:** 2026-05-05
+**Last updated:** 2026-05-09
 
-**Current state:** Automated research loop live. Weekly paper-search agent (`trig_013s3hXkiYrSnYh2Qes1KPws`, Sun 04:00 ET) scheduled and verified end-to-end on 2026-04-24. Four strategies on the leaderboard. `SmaRegime180` (4h, 32 trades, Feb 2024 → Apr 2026) passes H7 bull-window validation and full cost modeling: post-all-costs return +5.18%, est. Calmar ~7.2 (taker fees + historical Hyperliquid funding rates applied per-trade). Funding drag (−12.08 USDC) is 5.4× larger than taker fees (−2.25 USDC) and adversely selected to winning trades. Key correction: original 6.33% used ccxt's default 0.045%/side — not zero-fee as previously documented. **New (2026-05-05):** `HmmRegime4` strategy added (`user_data/strategies/HmmRegime4.py`) — 4-state GaussianHMM on rolling 24h log return + log-volume z-score; entry at P(bull-state)>0.65. Requires `pip install hmmlearn` in the freqtrade venv. Funding-rate history collector added to `scripts/download_hyperliquid.py` (`--funding --coins BTC`). Visual leaderboard chart added: `README.md` embeds `wiki/assets/leaderboard.png`; regenerate with `scripts/generate_leaderboard_chart.py` (requires `pip install matplotlib`). Venv shebangs patched after repo path change. Open items: (1) Run `HmmRegime4` backtest and compare Calmar/SQN/win-rate against `SmaRegime180`; (2) Download BTC funding history and implement threshold-gated carry strategy; (3) Calmar unreliable at N<20 — SQN is co-primary.
+**Current state:** Automated research loop live. Weekly paper-search agent (`trig_013s3hXkiYrSnYh2Qes1KPws`, Sun 04:00 ET) scheduled and verified end-to-end on 2026-04-24. Five strategies on the leaderboard. `SmaRegime180` (4h, 32 trades, Feb 2024 → Apr 2026) passes H7 bull-window validation and full cost modeling: post-all-costs return +5.18%, est. Calmar ~7.2. **New (2026-05-09):** `HmmRegime4` backtest run on BTC 1h bear window (Nov 2025 → May 2026, 187d, 74 trades, taker fees). Result: Calmar 26.35 (inflated by tiny MDD), SQN 1.38, **win rate 45.9% vs SmaRegime180's 21.9%** — open hypothesis #5 partially closed. Caveat: HMM fit on full visible window (look-ahead) — next priority is rolling-window refit. Multi-asset OHLCV expansion: 7 Hyperliquid majors (BTC/ETH/SOL/HYPE/ARB/AVAX/DOGE) × {1h, 4h} now downloaded. Funding history (~25k records each) for all 7 coins now on disk. `download_hyperliquid.py` patched: `fundingHistory` API contract changed (flat fields, not `req`-wrapped). Open items: (1) Rolling-window HMM refit to address look-ahead; (2) Multi-asset HmmRegime4 run; (3) Threshold-gated carry strategy (data ready); (4) Calmar unreliable at small MDD denominators — SQN co-primary.
 
 ---
 
@@ -50,14 +50,16 @@ Primary sort: **Calmar (closed trades)**. Co-primary: **SQN** (System Quality Nu
 | Strategy | Calmar (CT) | SQN | Profit Factor | Sharpe (CT) | CAGR | MDD | Trades | Data | Report |
 |---|---:|---:|---:|---:|---:|---:|---:|---|---|
 | `SmaRegime720` (1h SMA720 + slope gate) | **28.96**² | 0.69 | 3.68 | 0.20 | +1.66% | 0.30% | 6 | BTC 1h, bear, 2025-10-29→2026-04-24 | [2026-04-30](results/2026-04-30-sma-regime-720.md) |
+| `HmmRegime4` (4-state GaussianHMM, 1h) | **26.35**⁴ | 1.38 | 1.58 | 1.23 | +5.26% | 1.03% | 74 | BTC 1h, bear, 2025-11-04→2026-05-09 | [2026-05-09](results/2026-05-09-hmm-regime-4.md) |
 | `SmaRegime180` (4h SMA180 + slope gate) | **8.68**³ | 1.02 | 2.72 | 0.14 | +2.83% | 1.74% | 32 | BTC 4h, full, 2024-02-12→2026-04-24 | [2026-04-30](results/2026-04-30-sma-regime-180.md) |
-| `HmmRegime4` (4-state NH-HMM, 1h) | *pending* | *pending* | *pending* | *pending* | *pending* | *pending* | — | BTC 1h — run pending | — |
 | `LongOnlyStrategy` (placeholder SMA cross) | -4.55 | -0.53 | 0.81 | -0.36 | -1.61% | 1.86% | 49 | BTC 1h, bear, 2025-10-06→2026-04-24 | — |
 | `TrendFilter200` (1h SMA200 regime filter) | -6.84 | -2.79 | 0.43 | -2.54 | -5.44% | 4.22% | 90 | BTC 1h, bear, 2025-10-06→2026-04-24 | [2026-04-24](results/2026-04-24-trend-filter-200.md) |
 
 ² Calmar unreliable at N=6 (SQN 0.69). SmaRegime180 (N=32, SQN 1.02) is the more meaningful data point for this family.
 
 ³ Uses ccxt default 0.045%/side fee (not zero-fee as previously documented). Actual Hyperliquid taker (0.035%/side): Calmar 8.86 (+6.39%). Post-all-costs (taker + historical funding): est. Calmar ~7.2 (+5.18%). See [2026-04-30 result card](results/2026-04-30-sma-regime-180.md) for full breakdown.
+
+⁴ Calmar inflated by tiny MDD denominator (1.03%). SQN 1.38 is the more honest comparison vs SmaRegime180 (SQN 1.02). **Look-ahead caveat:** HMM is fit on the full visible window — treat as upper bound on signal quality, not a clean OOS result. Win-rate 45.9% vs SmaRegime180's 21.9% is the headline finding (open hypothesis #5 partially closed). Next: rolling-window HMM refit. See [2026-05-09 result card](results/2026-05-09-hmm-regime-4.md).
 
 **H7 status:** `SmaRegime180` passes — positive Calmar in both bear-only sub-window (6.59) and full bull+bear window (8.68). The slope-gate SMA family is not ruled out. Next: cost modeling + NH-HMM comparison.
 

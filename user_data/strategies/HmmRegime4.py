@@ -70,7 +70,7 @@ class HmmRegime4(IStrategy):
         # Normalise volume to z-score within the available window to reduce
         # scale sensitivity; use log first to symmetrise the distribution.
         log_vol = np.log(dataframe["volume"].clip(lower=1e-9))
-        log_vol_z = (log_vol - log_vol.mean()) / log_vol.std().clip(lower=1e-9)
+        log_vol_z = (log_vol - log_vol.mean()) / max(log_vol.std(), 1e-9)
 
         dataframe["_log_return"] = log_return
         dataframe["_log_vol_z"] = log_vol_z
