@@ -34,6 +34,7 @@ Research summaries added by the weekly paper-search agent. Sorted newest-first. 
 
 | Paper | Venue | Date | Priority addressed | File |
 |-------|-------|------|--------------------|------|
+| Funding-Aware Optimal Market Making for Perpetual DEXs | arXiv 2605.06405 | May 2026 | P1 — Carry window duration (OU half-life ~8h on Hyperliquid ETH/BTC/SOL) | [funding-aware-market-making-perp-dex-2026.md](papers/funding-aware-market-making-perp-dex-2026.md) |
 | Slippage-at-Risk (SaR): A Forward-Looking Liquidity Risk Framework for Perpetual Futures Exchanges | arXiv 2603.09164 | Mar 2026 | P3 — Slippage on Hyperliquid (real order-book data) | [slippage-at-risk-hyperliquid-2026.md](papers/slippage-at-risk-hyperliquid-2026.md) |
 | Evaluating Structured Strategy Backtests: Peer Benchmarks, Regime Timing, and Live Performance | arXiv 2604.18821 | Apr 2026 | P3 — Backtest-vs-live divergence | [backtest-regime-timing-live-performance-2026.md](papers/backtest-regime-timing-live-performance-2026.md) |
 | Markov and HMM for Regime Detection in Cryptocurrency Markets: Evidence from Bitcoin (2024–2026) | Preprints.org 202603.0831 | Mar 2026 | P2 — Regime detection (crypto-specific HMM) | [hmm-regime-detection-bitcoin-2026.md](papers/hmm-regime-detection-bitcoin-2026.md) |
