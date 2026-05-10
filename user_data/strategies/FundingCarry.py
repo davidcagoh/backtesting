@@ -21,6 +21,7 @@ Funding data:
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -35,11 +36,15 @@ ENTRY_THRESHOLD = -0.00001   # roughly the 5th-percentile of 24h rolling mean
 EXIT_THRESHOLD = 0.00002      # ~25th percentile — exit once funding normalises
 ROLLING_WINDOW_HOURS = 24
 
-FUNDING_DIR = Path("user_data/data/hyperliquid/funding")
+
+def _funding_dir() -> Path:
+    # Resolve per-call so backtests can switch venues via env without reimporting.
+    exchange = os.environ.get("CARRY_FUNDING_EXCHANGE", "hyperliquid")
+    return Path(f"user_data/data/{exchange}/funding")
 
 
 def _load_funding(coin: str) -> pd.DataFrame:
-    path = FUNDING_DIR / f"{coin}-funding.parquet"
+    path = _funding_dir() / f"{coin}-funding.parquet"
     if not path.exists():
         return pd.DataFrame()
     df = pd.read_parquet(path)
