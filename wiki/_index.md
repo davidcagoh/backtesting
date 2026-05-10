@@ -2,9 +2,9 @@
 
 Crypto strategy backtesting setup built on [Freqtrade](https://www.freqtrade.io/en/stable/), targeting Hyperliquid (USDC-quoted) markets. Revived 2026-04 as a possible base for actively trading personal crypto holdings.
 
-**Last updated:** 2026-05-09
+**Last updated:** 2026-05-10
 
-**Current state:** Automated research loop live. Weekly paper-search agent (`trig_013s3hXkiYrSnYh2Qes1KPws`, Sun 04:00 ET) scheduled and verified end-to-end on 2026-04-24. Five strategies on the leaderboard. `SmaRegime180` (4h, 32 trades, Feb 2024 → Apr 2026) passes H7 bull-window validation and full cost modeling: post-all-costs return +5.18%, est. Calmar ~7.2. **New (2026-05-09):** `HmmRegime4` backtest run on BTC 1h bear window (Nov 2025 → May 2026, 187d, 74 trades, taker fees). Result: Calmar 26.35 (inflated by tiny MDD), SQN 1.38, **win rate 45.9% vs SmaRegime180's 21.9%** — open hypothesis #5 partially closed. Caveat: HMM fit on full visible window (look-ahead) — next priority is rolling-window refit. Multi-asset OHLCV expansion: 7 Hyperliquid majors (BTC/ETH/SOL/HYPE/ARB/AVAX/DOGE) × {1h, 4h} now downloaded. Funding history (~25k records each) for all 7 coins now on disk. `download_hyperliquid.py` patched: `fundingHistory` API contract changed (flat fields, not `req`-wrapped). Open items: (1) Rolling-window HMM refit to address look-ahead; (2) Multi-asset HmmRegime4 run; (3) Threshold-gated carry strategy (data ready); (4) Calmar unreliable at small MDD denominators — SQN co-primary.
+**Current state:** Four experiments completed 2026-05-10. (1) **Rolling-window HMM refit** (`HmmRegime4Rolling`) on BTC: SQN 0.59 (vs look-ahead's 1.38), win rate 37.7%, return +1.15%. **Look-ahead absorbed ~50% of the alpha**; demotes HmmRegime4 to upper-bound. (2) **Multi-asset HmmRegime4Rolling** on 7 majors: −5.62%, only HYPE/BTC profitable. HMM does not generalise without per-coin tuning. (3) **FundingCarry** threshold-gated long-only on 7 majors: catastrophic −30.16%, all losers stopped at −10%. Naive carry fails in bear. (4) **HmmCarry conjunction** (HMM bull AND funding-negative) on 7 majors: −19.59%, MDD 23.86%. **Worse than HMM alone** — signals are anti-complementary, not independent (HMM is reactive, funding is forward-looking; intersection picks worst moments). Only HYPE/ETH showed expected tightening; BTC win rate collapsed 41.1% → 7.7%. Open items: (1) Reverse-sign HmmCarry (positive funding as bull confirmation); (2) Per-coin funding-sign learning; (3) Lead-lag conjunction (funding-negative *before* HMM-bull turns on); (4) Per-coin HMM hyperparameter sweep with DSR gate; (5) Bull-window CEX backtest as training-set check.
 
 ---
 
@@ -50,16 +50,22 @@ Primary sort: **Calmar (closed trades)**. Co-primary: **SQN** (System Quality Nu
 | Strategy | Calmar (CT) | SQN | Profit Factor | Sharpe (CT) | CAGR | MDD | Trades | Data | Report |
 |---|---:|---:|---:|---:|---:|---:|---:|---|---|
 | `SmaRegime720` (1h SMA720 + slope gate) | **28.96**² | 0.69 | 3.68 | 0.20 | +1.66% | 0.30% | 6 | BTC 1h, bear, 2025-10-29→2026-04-24 | [2026-04-30](results/2026-04-30-sma-regime-720.md) |
-| `HmmRegime4` (4-state GaussianHMM, 1h) | **26.35**⁴ | 1.38 | 1.58 | 1.23 | +5.26% | 1.03% | 74 | BTC 1h, bear, 2025-11-04→2026-05-09 | [2026-05-09](results/2026-05-09-hmm-regime-4.md) |
+| `HmmRegime4` (look-ahead, 4-state GaussianHMM, 1h) | 26.35⁴ | 1.38⁴ | 1.58 | 1.23 | +5.26% | 1.03% | 74 | BTC 1h, bear, 2025-11-04→2026-05-09 | [2026-05-09](results/2026-05-09-hmm-regime-4.md) |
+| `HmmRegime4Rolling` (walk-forward refit, 1h) | 12.11 | 0.59 | 1.31 | 0.51 | +2.56% | 1.10% | 53 | BTC 1h, bear, 2025-11-25→2026-05-09 | [2026-05-10](results/2026-05-10-hmm-regime-4-rolling.md) |
 | `SmaRegime180` (4h SMA180 + slope gate) | **8.68**³ | 1.02 | 2.72 | 0.14 | +2.83% | 1.74% | 32 | BTC 4h, full, 2024-02-12→2026-04-24 | [2026-04-30](results/2026-04-30-sma-regime-180.md) |
 | `LongOnlyStrategy` (placeholder SMA cross) | -4.55 | -0.53 | 0.81 | -0.36 | -1.61% | 1.86% | 49 | BTC 1h, bear, 2025-10-06→2026-04-24 | — |
 | `TrendFilter200` (1h SMA200 regime filter) | -6.84 | -2.79 | 0.43 | -2.54 | -5.44% | 4.22% | 90 | BTC 1h, bear, 2025-10-06→2026-04-24 | [2026-04-24](results/2026-04-24-trend-filter-200.md) |
+| `HmmRegime4Rolling` 7-asset portfolio | -4.43 | -0.59 | 0.91 | -1.53 | -12.02% | 14.70% | 504 | 7 majors 1h, bear, 2025-11-25→2026-05-09 | [2026-05-10](results/2026-05-10-hmm-regime-4-multi-asset.md) |
+| `FundingCarry` 7-asset portfolio | -7.35 | -3.60 | 0.28 | -2.57 | — | 42.14% | 47 | 7 majors 1h, bear, 2025-11-04→2026-05-09 | [2026-05-10](results/2026-05-10-funding-carry.md) |
+| `HmmCarry` (conjunction) 7-asset portfolio⁵ | -9.51 | — | 0.55 | -2.09 | — | 23.86% | 278 | 7 majors 1h, bear, 2025-11-25→2026-05-09 | [2026-05-10](results/2026-05-10-hmm-carry-conjunction.md) |
 
 ² Calmar unreliable at N=6 (SQN 0.69). SmaRegime180 (N=32, SQN 1.02) is the more meaningful data point for this family.
 
 ³ Uses ccxt default 0.045%/side fee (not zero-fee as previously documented). Actual Hyperliquid taker (0.035%/side): Calmar 8.86 (+6.39%). Post-all-costs (taker + historical funding): est. Calmar ~7.2 (+5.18%). See [2026-04-30 result card](results/2026-04-30-sma-regime-180.md) for full breakdown.
 
-⁴ Calmar inflated by tiny MDD denominator (1.03%). SQN 1.38 is the more honest comparison vs SmaRegime180 (SQN 1.02). **Look-ahead caveat:** HMM is fit on the full visible window — treat as upper bound on signal quality, not a clean OOS result. Win-rate 45.9% vs SmaRegime180's 21.9% is the headline finding (open hypothesis #5 partially closed). Next: rolling-window HMM refit. See [2026-05-09 result card](results/2026-05-09-hmm-regime-4.md).
+⁴ Calmar inflated by tiny MDD denominator (1.03%). **Look-ahead, upper-bound only.** Honest walk-forward version (`HmmRegime4Rolling`, SQN 0.59) is the comparable number — look-ahead absorbed ~50% of the alpha (return +2.65% → +1.15%, win rate 45.9% → 37.7%). HmmRegime4Rolling is the row to rank against SmaRegime180 (SQN 0.59 vs 1.02 — SmaRegime180 wins on co-primary). Multi-asset run on 7 majors is decisively negative (−5.62%) — HMM does not generalise without per-coin tuning.
+
+⁵ Conjunction of HmmRegime4Rolling (bull_prob > 0.65) and FundingCarry (funding_roll < threshold). Hypothesis: independent signals → tighter filter. Result: signals are anti-complementary in this window — conjunction is *worse* than HMM alone (−19.59% vs −5.62%). HMM is reactive; funding is forward-looking; intersection picks late-cycle bull lag with early-cycle bear lead. Only HYPE/ETH showed expected tightening; BTC win rate collapsed 41.1% → 7.7%. See result card for reverse-sign and per-coin follow-ups.
 
 **H7 status:** `SmaRegime180` passes — positive Calmar in both bear-only sub-window (6.59) and full bull+bear window (8.68). The slope-gate SMA family is not ruled out. Next: cost modeling + NH-HMM comparison.
 

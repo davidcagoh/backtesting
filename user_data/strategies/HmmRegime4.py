@@ -89,7 +89,12 @@ class HmmRegime4(IStrategy):
             n_iter=200,
             random_state=42,
         )
-        model.fit(X)
+        try:
+            model.fit(X)
+        except Exception:
+            # Some coins produce non-PD covariance under "full". Leave bull_prob
+            # NaN so no entries fire on this pair.
+            return dataframe
 
         # Identify bull states by positive mean log return.
         bull_states = [i for i in range(N_COMPONENTS) if model.means_[i, 0] > 0]
