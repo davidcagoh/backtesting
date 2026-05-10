@@ -2,9 +2,11 @@
 
 Crypto strategy backtesting setup built on [Freqtrade](https://www.freqtrade.io/en/stable/), targeting Hyperliquid (USDC-quoted) markets. Revived 2026-04 as a possible base for actively trading personal crypto holdings.
 
-**Last updated:** 2026-05-10
+**Last updated:** 2026-05-10 (late session)
 
-**Current state:** Four experiments completed 2026-05-10. (1) **Rolling-window HMM refit** (`HmmRegime4Rolling`) on BTC: SQN 0.59 (vs look-ahead's 1.38), win rate 37.7%, return +1.15%. **Look-ahead absorbed ~50% of the alpha**; demotes HmmRegime4 to upper-bound. (2) **Multi-asset HmmRegime4Rolling** on 7 majors: −5.62%, only HYPE/BTC profitable. HMM does not generalise without per-coin tuning. (3) **FundingCarry** threshold-gated long-only on 7 majors: catastrophic −30.16%, all losers stopped at −10%. Naive carry fails in bear. (4) **HmmCarry conjunction** (HMM bull AND funding-negative) on 7 majors: −19.59%, MDD 23.86%. **Worse than HMM alone** — signals are anti-complementary, not independent (HMM is reactive, funding is forward-looking; intersection picks worst moments). Only HYPE/ETH showed expected tightening; BTC win rate collapsed 41.1% → 7.7%. Open items: (1) Reverse-sign HmmCarry (positive funding as bull confirmation); (2) Per-coin funding-sign learning; (3) Lead-lag conjunction (funding-negative *before* HMM-bull turns on); (4) Per-coin HMM hyperparameter sweep with DSR gate; (5) Bull-window CEX backtest as training-set check.
+**Current state:** Six experiments completed 2026-05-10. (5) **Pre-registered kill criteria for SmaRegime180** — see `decisions/004-kill-criteria-sma-regime-180.md`. Hard kills (MDD > 5.5%, six straight stops, 365d return ≤ 0 for 30d, walk-forward Calmar < 2). Continuous shrinkage formula (Davies–Ravagnani) ties live position size to rolling 180d PF, Calmar, and bull/bear ratio. Mandatory quarterly walk-forward review. (6) **CEX bull-window validation** — Binance BTC/USDT:USDT 4h, 2019-10 → 2026-05 (6.7y, 92 trades, 2 bull + 2 bear cycles). Full-window Calmar **7.23**, SQN **1.73**, PF **2.85**, MDD 2.22%, win rate 21.7% — matches Hyperliquid result within noise. Sub-windows: 2020-21 bull Calmar 14.04, 2022 bear Calmar −5.23 (PF 0.00 but MDD 0.28% — strategy correctly stays flat in deep bears), 2023-24 bull Calmar 21.13, 2025 bear Calmar 3.59. **SmaRegime180 graduates to paper-trade candidate.** See `results/2026-05-10-sma-regime-180-cex-bull-validation.md`.
+
+**Earlier 2026-05-10 experiments:** (1) **Rolling-window HMM refit** (`HmmRegime4Rolling`) on BTC: SQN 0.59 (vs look-ahead's 1.38), win rate 37.7%, return +1.15%. **Look-ahead absorbed ~50% of the alpha**; demotes HmmRegime4 to upper-bound. (2) **Multi-asset HmmRegime4Rolling** on 7 majors: −5.62%, only HYPE/BTC profitable. HMM does not generalise without per-coin tuning. (3) **FundingCarry** threshold-gated long-only on 7 majors: catastrophic −30.16%, all losers stopped at −10%. Naive carry fails in bear. (4) **HmmCarry conjunction** (HMM bull AND funding-negative) on 7 majors: −19.59%, MDD 23.86%. **Worse than HMM alone** — signals are anti-complementary, not independent (HMM is reactive, funding is forward-looking; intersection picks worst moments). Only HYPE/ETH showed expected tightening; BTC win rate collapsed 41.1% → 7.7%. Open items: (1) Reverse-sign HmmCarry (positive funding as bull confirmation); (2) Per-coin funding-sign learning; (3) Lead-lag conjunction (funding-negative *before* HMM-bull turns on); (4) Per-coin HMM hyperparameter sweep with DSR gate; (5) Bull-window CEX backtest as training-set check.
 
 ---
 
@@ -17,6 +19,7 @@ Crypto strategy backtesting setup built on [Freqtrade](https://www.freqtrade.io/
   - [001-drop-external-data-repo.md](decisions/001-drop-external-data-repo.md) — removed the `freqtrade_hyperliquid_download-data` gitlink
   - [002-hyperliquid-deep-history.md](decisions/002-hyperliquid-deep-history.md) — accept the 5000-candle API cap; reconstruct from S3 only if needed
   - [003-baseline-eval.md](decisions/003-baseline-eval.md) — baseline used by `scripts/run_eval.sh` and the Session Start Routine
+  - [004-kill-criteria-sma-regime-180.md](decisions/004-kill-criteria-sma-regime-180.md) — pre-registered hard-kill thresholds + continuous-shrinkage formula for SmaRegime180
 - `experiments/` — backtest runs and results
 - `results/` — per-strategy report cards (one file per run)
 - `papers/` — summaries of relevant research (populated by the weekly paper-search agent)
@@ -53,6 +56,7 @@ Primary sort: **Calmar (closed trades)**. Co-primary: **SQN** (System Quality Nu
 | `HmmRegime4` (look-ahead, 4-state GaussianHMM, 1h) | 26.35⁴ | 1.38⁴ | 1.58 | 1.23 | +5.26% | 1.03% | 74 | BTC 1h, bear, 2025-11-04→2026-05-09 | [2026-05-09](results/2026-05-09-hmm-regime-4.md) |
 | `HmmRegime4Rolling` (walk-forward refit, 1h) | 12.11 | 0.59 | 1.31 | 0.51 | +2.56% | 1.10% | 53 | BTC 1h, bear, 2025-11-25→2026-05-09 | [2026-05-10](results/2026-05-10-hmm-regime-4-rolling.md) |
 | `SmaRegime180` (4h SMA180 + slope gate) | **8.68**³ | 1.02 | 2.72 | 0.14 | +2.83% | 1.74% | 32 | BTC 4h, full, 2024-02-12→2026-04-24 | [2026-04-30](results/2026-04-30-sma-regime-180.md) |
+| `SmaRegime180` cross-cycle (Binance perp)⁶ | **7.23** | **1.73** | 2.85 | 0.13 | +2.84% | 2.22% | 92 | BTC 4h, 2019-10→2026-05 | [2026-05-10](results/2026-05-10-sma-regime-180-cex-bull-validation.md) |
 | `LongOnlyStrategy` (placeholder SMA cross) | -4.55 | -0.53 | 0.81 | -0.36 | -1.61% | 1.86% | 49 | BTC 1h, bear, 2025-10-06→2026-04-24 | — |
 | `TrendFilter200` (1h SMA200 regime filter) | -6.84 | -2.79 | 0.43 | -2.54 | -5.44% | 4.22% | 90 | BTC 1h, bear, 2025-10-06→2026-04-24 | [2026-04-24](results/2026-04-24-trend-filter-200.md) |
 | `HmmRegime4Rolling` 7-asset portfolio | -4.43 | -0.59 | 0.91 | -1.53 | -12.02% | 14.70% | 504 | 7 majors 1h, bear, 2025-11-25→2026-05-09 | [2026-05-10](results/2026-05-10-hmm-regime-4-multi-asset.md) |
@@ -67,7 +71,9 @@ Primary sort: **Calmar (closed trades)**. Co-primary: **SQN** (System Quality Nu
 
 ⁵ Conjunction of HmmRegime4Rolling (bull_prob > 0.65) and FundingCarry (funding_roll < threshold). Hypothesis: independent signals → tighter filter. Result: signals are anti-complementary in this window — conjunction is *worse* than HMM alone (−19.59% vs −5.62%). HMM is reactive; funding is forward-looking; intersection picks late-cycle bull lag with early-cycle bear lead. Only HYPE/ETH showed expected tightening; BTC win rate collapsed 41.1% → 7.7%. See result card for reverse-sign and per-coin follow-ups.
 
-**H7 status:** `SmaRegime180` passes — positive Calmar in both bear-only sub-window (6.59) and full bull+bear window (8.68). The slope-gate SMA family is not ruled out. Next: cost modeling + NH-HMM comparison.
+⁶ Cross-cycle out-of-sample validation. 6.7y of Binance BTC perp 4h covering 2 bull + 2 bear cycles. Sub-window decomposition: 2020-21 bull Calmar 14.04, 2022 bear Calmar −5.23 (PF 0.00 but MDD 0.28% — strategy correctly stays flat), 2023-24 bull Calmar 21.13, 2025 bear Calmar 3.59. Win rate 21.7% identical to Hyperliquid (21.9%). **SmaRegime180 graduates to paper-trade candidate** under decisions/004 kill criteria. Worst regime is 2022-style deep bear: PF goes to 0 but slope-gate filter caps DD at 0.28%. Continuous-shrinkage formula would have shrunk size to ~10% through 2022 without hard-killing.
+
+**H7 status (updated 2026-05-10):** `SmaRegime180` passes the cross-cycle validation on Binance perp 2019-26. Calmar 7.23 (close to Hyperliquid 8.68), win rate 21.7% (vs 21.9%), bull-window Calmars 14.04 and 21.13, 2022 bear is contained-failure (Calmar −5.23 but MDD 0.28%). H7 inflation is real but bounded — strategy is regime-flattered by ~20% on the original Hyperliquid window, not collapsing. Slope-gate family validated across 4 regime transitions.
 
 **Fee correction (2026-05-03):** The original 6.33% run was NOT zero-fee — Freqtrade applied ccxt's hardcoded Hyperliquid default (0.045%/side). True zero-fee baseline is 6.62% (Calmar 9.50). Actual Hyperliquid taker (0.035%/side, via `--fee` CLI flag) gives 6.39% (Calmar 8.86). The `"fee"` key in config.json exchange block is silently ignored by the backtester.
 

@@ -90,7 +90,18 @@ Explain the mechanism, not just the metric — so we don't re-explore variants.
 
 ## What the Next Experiments Should Prioritise
 
-Updated 2026-05-09.
+Updated 2026-05-10.
+
+**Done (2026-05-10 late):**
+- **Pre-registered kill criteria** for SmaRegime180 — `decisions/004-kill-criteria-sma-regime-180.md`. Hard kills (MDD > 5.5%, six straight stops, 365d return ≤ 0 for 30d, walk-forward Calmar < 2). Continuous-shrinkage formula tying live size to rolling 180d PF, Calmar, and bull/bear ratio (Davies–Ravagnani 2026). Quarterly walk-forward review mandatory.
+- **CEX bull-window validation** for SmaRegime180 — Binance BTC/USDT:USDT perp 4h, 2019-10 → 2026-05, 6.7y, 92 trades, 2 bull + 2 bear cycles. Full-window Calmar 7.23 (vs Hyperliquid 8.68), SQN 1.73, PF 2.85, MDD 2.22%, win rate 21.7% (vs 21.9% on Hyperliquid — structurally identical). Sub-windows: bulls Calmar 14 / 21, 2022 deep bear Calmar −5.23 with PF 0 but MDD 0.28% (slope gate correctly stays flat), 2025 mild bear +1.61%. **SmaRegime180 graduates from leaderboard headline to paper-trading candidate.** H7 inflation is bounded (~20%), not collapsing.
+
+**Next:**
+1. **Run HmmRegime4Rolling on the same Binance window.** HMM was tuned on Hyperliquid; without the same cross-cycle check we cannot tell whether SQN 0.59 is regime-specific or structural. Same data, same fee, same script.
+2. **Reverse-sign HmmCarry** (positive funding as bull confirmation; ~10 min per yesterday's HmmCarry post-mortem).
+3. **Begin 30-day paper-trading dry-run for SmaRegime180** on Hyperliquid live, evaluating against decisions/004 kill criteria.
+
+**Earlier 2026-05-10 priorities (still open):**
 
 1. **Rolling-window HMM refit for HmmRegime4.** The 2026-05-09 backtest (BTC 1h bear, 74 trades, win rate 45.9%, SQN 1.38, Calmar 26.35) was run with the HMM fit on the full visible window — i.e. with look-ahead. Implement a walk-forward variant: re-fit the HMM every K bars on prior data only. If win rate stays above ~35%, the regime signal is real. If it collapses toward 22%, the look-ahead was the alpha. **This is the single most important next experiment** — it tells us whether HmmRegime4 is genuine regime detection or an artifact.
 2. **Multi-asset HmmRegime4 run.** Data for 7 Hyperliquid majors (BTC/ETH/SOL/HYPE/ARB/AVAX/DOGE) × {1h, 4h} now on disk (downloaded 2026-05-09). Run HmmRegime4 across all 7 to check whether regime structure generalises beyond BTC. Watch for cross-asset correlation (BTC dominance ≈ 0.7+) — effective sample size is less than 7×.
