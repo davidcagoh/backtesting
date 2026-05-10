@@ -95,6 +95,15 @@ STRATEGIES = [
         bull_trades=158, bull_years=2.0,
         bull_calmar=13.68,
     ),
+    # HmmSmaSlope (2026-05-10): HMM bull-state entries gated by SmaRegime180 slope.
+    # Bull window: 6 Binance majors 2023-01 → 2025-01. Bear: 7 HL majors 2025-10 → 2026-05.
+    Strategy(
+        name="HmmSmaSlope", family="Conjunction", universe="6 coins",
+        bull_return=50.47, bear_return=-4.00,
+        bull_mdd=5.15, bear_mdd=8.65,
+        bull_trades=259, bull_years=2.0,
+        bull_calmar=23.63,
+    ),
 ]
 
 
@@ -186,6 +195,8 @@ def plot(out_path: Path) -> None:
         elif s.name == "HmmRegime4Rolling-multi":
             dx, dy = -1.5, 3.5
             ha = "right"
+        elif s.name == "HmmSmaSlope":
+            dx, dy = 1.8, 3.5
         ax_left.annotate(
             s.name, (s.bear_mdd, s.bull_return),
             xytext=(s.bear_mdd + dx, s.bull_return + dy),
@@ -195,7 +206,7 @@ def plot(out_path: Path) -> None:
     ax_left.axhline(0, color="grey", lw=0.5, alpha=0.5)
     ax_left.set_xlabel("Bear-cycle MDD (%) — lower is better →", fontsize=11)
     ax_left.set_ylabel("Bull-cycle return (%) — higher is better ↑", fontsize=11)
-    ax_left.set_title("Bull capture vs bear drawdown\nFrontier is one segment wide",
+    ax_left.set_title("Bull capture vs bear drawdown\nFrontier is three points, not two",
                       fontsize=12, fontweight="bold", loc="left")
     ax_left.set_xlim(-2, 50)
     ax_left.set_ylim(-5, 85)
@@ -231,6 +242,8 @@ def plot(out_path: Path) -> None:
             ha = "right"
         elif s.name == "SmaRegime180":
             dx, dy = 6, -0.8
+        elif s.name == "HmmSmaSlope":
+            dx, dy = 6, 1.0
         ax_right.annotate(
             s.name, (density, s.bull_calmar),
             xytext=(density + dx, s.bull_calmar + dy),
