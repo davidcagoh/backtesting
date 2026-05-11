@@ -25,9 +25,11 @@ fi
   -p BTC/USDC:USDC \
   --eps --max-open-trades 1
 
-# Regenerate leaderboard chart (non-fatal — requires: pip install matplotlib)
+# Regenerate Pareto chart (non-fatal — requires: pip install matplotlib).
+# The old bar-chart leaderboard generator is deprecated (see README); the
+# Pareto chart replaced it after strategies became regime-conditional.
 PYTHON="$(dirname "$FT")/python"
 if [[ -x "$PYTHON" ]]; then
-  "$PYTHON" "$(dirname "${BASH_SOURCE[0]}")/generate_leaderboard_chart.py" \
+  "$PYTHON" "$(dirname "${BASH_SOURCE[0]}")/generate_pareto_chart.py" \
     || echo "Warning: chart generation failed — run: pip install matplotlib in the freqtrade venv" >&2
 fi
