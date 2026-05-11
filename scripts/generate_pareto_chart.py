@@ -104,6 +104,14 @@ STRATEGIES = [
         bull_trades=259, bull_years=2.0,
         bull_calmar=23.63,
     ),
+    # HmmSmaSlopeV2 (2026-05-10): continuous slope-strength sizing instead of binary gate.
+    Strategy(
+        name="HmmSmaSlopeV2", family="Conjunction", universe="6 coins",
+        bull_return=33.44, bear_return=-1.58,
+        bull_mdd=5.89, bear_mdd=4.44,
+        bull_trades=254, bull_years=2.0,
+        bull_calmar=13.69,
+    ),
 ]
 
 
@@ -197,6 +205,8 @@ def plot(out_path: Path) -> None:
             ha = "right"
         elif s.name == "HmmSmaSlope":
             dx, dy = 1.8, 3.5
+        elif s.name == "HmmSmaSlopeV2":
+            dx, dy = 1.8, -4
         ax_left.annotate(
             s.name, (s.bear_mdd, s.bull_return),
             xytext=(s.bear_mdd + dx, s.bull_return + dy),
@@ -206,7 +216,7 @@ def plot(out_path: Path) -> None:
     ax_left.axhline(0, color="grey", lw=0.5, alpha=0.5)
     ax_left.set_xlabel("Bear-cycle MDD (%) — lower is better →", fontsize=11)
     ax_left.set_ylabel("Bull-cycle return (%) — higher is better ↑", fontsize=11)
-    ax_left.set_title("Bull capture vs bear drawdown\nFrontier is three points, not two",
+    ax_left.set_title("Bull capture vs bear drawdown\nV2 is the first multi-coin point under the kill threshold",
                       fontsize=12, fontweight="bold", loc="left")
     ax_left.set_xlim(-2, 50)
     ax_left.set_ylim(-5, 85)
@@ -244,6 +254,8 @@ def plot(out_path: Path) -> None:
             dx, dy = 6, -0.8
         elif s.name == "HmmSmaSlope":
             dx, dy = 6, 1.0
+        elif s.name == "HmmSmaSlopeV2":
+            dx, dy = 6, -0.8
         ax_right.annotate(
             s.name, (density, s.bull_calmar),
             xytext=(density + dx, s.bull_calmar + dy),
