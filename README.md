@@ -2,11 +2,21 @@
 
 Multi-strategy backtest harness for crypto perpetual futures, built on [Freqtrade](https://www.freqtrade.io/en/stable/). Targets Hyperliquid for live trading and uses Binance perp history for cross-cycle validation.
 
-**Snapshot: 2026-05-10**
+**Snapshot: 2026-05-16**
 
 ---
 
-## The headline finding
+## Paper
+
+**A Six-Layer Evaluation Stack and a Portfolio-Aware Kill Criterion** — [PDF](https://github.com/davidcagoh/backtesting/releases/download/paper-v1/algo-traders-2026-05-16.pdf) · single-column LaTeX, 14 pages.
+
+Contribution is the methodology, not the strategies. The strategies below are the worked example.
+
+The stack: (L1) returns, (L2) risk-adjusted return, (L3) sample-size awareness via Probabilistic Sharpe, (L4) multiple-testing deflation via DSR, (L5) tail and path shape, (L6) portfolio diversification via correlation and Marginal Diversification Benefit. A pre-registered kill criterion (5.5% bear MDD) sits on top of the stack, with continuous shrinkage along the slope-sizing axis as the load-bearing finding.
+
+---
+
+## The worked example
 
 Five strategies. One Pareto frontier. No single best.
 
@@ -38,7 +48,7 @@ Each row is a single strategy's *shape*, not its *score*. The shape changes whic
 - **HmmRegime4Rolling-multi** captures bulls aggressively at the cost of structural bear exposure.
 - The three middle conjunctions trace a continuous tradeoff between the two endpoints, parameterised by the slope-sizing exponent (binary → sqrt → linear).
 
-Full per-strategy detail is in [wiki/results/](wiki/results/). The cross-cutting verdicts are in [wiki/learnings.md](wiki/learnings.md). A longer external-style narrative covering the methodology and how the project got here is in the parent repo at [`writeup-2026-05-10.md`](../writeup-2026-05-10.md).
+Full per-strategy detail is in [wiki/results/](wiki/results/). The cross-cutting verdicts are in [wiki/learnings.md](wiki/learnings.md). The principled writeup of the framework above is the paper PDF linked at the top of this README.
 
 ---
 
