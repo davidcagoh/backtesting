@@ -12,6 +12,14 @@ This file is the self-correction mechanism for the project. Entries in `Ruled Ou
 
 ## Confirmed Facts
 
+### Evaluation
+- **All slope-gate strategies have extreme right-skew and fat tails.** Layer-5 backfill on 6 leaderboard ZIPs (2026-05-16) measured skew +1.3 to +15.8 and excess kurtosis +21 to +338. These are *very* far from Gaussian. **Implication: Sharpe overstates these strategies materially.** Calmar + SQN + DSR partially compensate; Layer-5 reading (Martin + tail-ratio + CVaR-5%) is the explicit correction. Reported on the 6 cards in `wiki/results/2026-05-10-*.md`.
+- **Bear-window slope-gate runs have tail_ratio = 0.00.** P95 of daily returns is exactly zero — there are no winners in the right tail because the slope gate keeps the strategy flat. Family is regime-conditional by design; the bear win-rate of ~22% is structural, not a bug. Confirmed from HmmSmaSlope/V2/V3 Hyperliquid bear ZIPs.
+- **HmmCarry tail_ratio = NaN; near-zero daily returns.** The conjunction barely trades — most days the strategy is flat. Bull-window Ulcer 1.50 but the *reason* is "almost never deployed", not "deployed and uneventful." Don't read low Ulcer as edge here.
+- **FundingCarry is chronically underwater, not just deeply once.** Ulcer 5.49 + Pain 4.05 on Binance bull — among the worst of any leaderboard strategy. MDD numbers alone underrepresent how much time this strategy spends underwater. Strong example of Ulcer disagreeing with point-in-time MDD: if MDD were the only DD signal, this strategy might be misranked vs strategies with the same point-in-time MDD but quicker recovery.
+- **R2 (HmmRegime4Rolling) K1 kill is doubly justified under Ulcer.** A1.5 re-backtest on Binance common window (2020-09 → 2026-05) produced MDD 7.65%, Ulcer 4.01, Pain 3.47. Compared to T3 on same window (MDD 2.21%, Ulcer 1.30, Pain 1.12), R2 is 2-3× worse on path-aware metrics. The drawdown is *chronic*, not one event — Pain 3.47% says the strategy spends most of its life meaningfully underwater. K1 (MDD > 5.5%) is supported, not exaggerated, by the path-aware lens.
+- **TrendFilter200 on common window is positive but lottery-shaped.** A1.5 re-backtest: total +15.49%, MDD 8.54%, **skew +15.02, excess kurtosis +308.0**, win rate 12.5%. The strategy is chronically underwater (Pain 3.04, Ulcer 3.79) with rare massive winners providing all the return. This refines the original "ruled out" verdict: TrendFilter200's *mechanism* (8-day MA on 1h) is correctly killed for bear regimes but accidentally captures bull-run breakouts; the family failure mode is "no slope gate", not "wrong window length". Slope-gate variants (SmaRegime180/720) achieve similar bull returns with 2-3× lower Pain.
+
 ### Infrastructure
 - **Freqtrade** is the open-source framework this project is built on — live trading bot + backtester. We only care about the backtester for now.
 - **Hyperliquid uses USDC as the quote currency.** Freqtrade pair notation for futures is `BTC/USDC:USDC` (base/quote:settle).
@@ -94,6 +102,15 @@ Explain the mechanism, not just the metric — so we don't re-explore variants.
 ## What the Next Experiments Should Prioritise
 
 Updated 2026-05-10.
+
+**Done (2026-05-16):**
+- **Layer-5 evaluation tooling shipped** (`scripts/eval_layers.py`). 6 result cards backfilled with tail/path metrics. Decision 005 published. See `wiki/decisions/005-evaluation-and-diversity-plan.md`.
+- **Pre-decisions locked in** for the evaluation-and-diversity buildout (correlation window, MDB weighting, held-out reserve, pairs mechanics). Documented in decision 005 section 7.
+- **Cross-cycle re-backtest on Binance 5-coin common window (2020-09 → 2026-05)** completed for 12 strategies — 6 BTC-only + 6 multi-asset. Results appended to `_index.md` as "Common-Window Leaderboard (A1.5)".
+- **Major finding: R∧T family (HmmSmaSlope V1/V2/V3) on 5 coins is the new headline frontier.** R∧T2 Calmar 30.23, SQN 2.73, CAGR 21.31% over 5.5y. MDD 6.05% breaches K1 (5.5%) by 0.55pp — disputed whether this kills the strategy or whether K1 was mis-calibrated on bear-only Hyperliquid data. Decision deferred to A2 (MDB will tell us whether R∧T2 is portfolio-justified vs T3 regardless of MDD breach). See `_index.md` footnote 8.
+- **R2 (HmmRegime4Rolling) K1 kill is doubly justified under Layer-5.** Common-window MDD 7.65%, Ulcer 4.01, Pain 3.47 — chronic underwater, not one event. T3 same window: MDD 2.21%, Ulcer 1.30, Pain 1.12. R2 is 2-3× worse on every path-aware metric.
+- **HmmCarry anti-complementarity reproduces on Binance common window.** MDD 35.46% (vs Hyperliquid bear -19.59%). Conjunction confirmed dead, not regime-specific.
+- **TrendFilter200 partial-rehabilitation.** Common window +15.49%, but skew +15 / kurt +308 / Pain 3.04 → lottery-shaped, not durable edge.
 
 **Done (2026-05-10 late):**
 - **Pre-registered kill criteria** for SmaRegime180 — `decisions/004-kill-criteria-sma-regime-180.md`. Hard kills (MDD > 5.5%, six straight stops, 365d return ≤ 0 for 30d, walk-forward Calmar < 2). Continuous-shrinkage formula tying live size to rolling 180d PF, Calmar, and bull/bear ratio (Davies–Ravagnani 2026). Quarterly walk-forward review mandatory.

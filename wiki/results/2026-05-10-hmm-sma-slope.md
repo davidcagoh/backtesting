@@ -104,3 +104,40 @@ For paper-trade graduation under the current kill criteria (MDD > 5.5% = hard ki
 ```
 
 Result archives: `user_data/backtest_results/hmm_sma_slope_binance_bull.json` and `…_hl_bear.json`.
+
+---
+
+## Layer 5 — Tail / Path shape (added 2026-05-16)
+
+Backfilled per decision 005 (`wiki/decisions/005-evaluation-and-diversity-plan.md`). Generated with `scripts/eval_layers.py`.
+
+
+**Binance bull**
+
+| Metric | Value | Reading |
+|---|---:|---|
+| Skew | +9.36 | right-tailed (rare big wins) |
+| Excess kurtosis | +111.53 | fat-tailed (Sharpe overstates) |
+| Tail ratio (\|P95\|/\|P5\|) | 0.99 | balanced |
+| CVaR-5% (daily) | -0.81% | mean loss on worst 5% of days |
+| Ulcer Index | 2.79 | path-aware DD (lower = better) |
+| Martin ratio | 7.44 | CAGR per unit ulcer (higher = better) |
+| Pain index | 2.21 | mean abs drawdown |
+
+_N_obs (daily): 792_
+
+
+**Hyperliquid bear**
+
+| Metric | Value | Reading |
+|---|---:|---|
+| Skew | +0.20 | near-symmetric |
+| Excess kurtosis | +21.80 | fat-tailed (Sharpe overstates) |
+| Tail ratio (\|P95\|/\|P5\|) | 0.00 | losers > winners in size |
+| CVaR-5% (daily) | -0.84% | mean loss on worst 5% of days |
+| Ulcer Index | 4.53 | path-aware DD (lower = better) |
+| Martin ratio | -2.46 | CAGR per unit ulcer (higher = better) |
+| Pain index | 3.38 | mean abs drawdown |
+
+_N_obs (daily): 206_
+

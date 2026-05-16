@@ -2,9 +2,9 @@
 
 Crypto strategy backtesting setup built on [Freqtrade](https://www.freqtrade.io/en/stable/), targeting Hyperliquid (USDC-quoted) markets. Revived 2026-04 as a possible base for actively trading personal crypto holdings.
 
-**Last updated:** 2026-05-10 (late session)
+**Last updated:** 2026-05-16 (evaluation + diversity buildout sprint)
 
-**Current state:** Six experiments completed 2026-05-10. (5) **Pre-registered kill criteria for SmaRegime180** — see `decisions/004-kill-criteria-sma-regime-180.md`. Hard kills (MDD > 5.5%, six straight stops, 365d return ≤ 0 for 30d, walk-forward Calmar < 2). Continuous shrinkage formula (Davies–Ravagnani) ties live position size to rolling 180d PF, Calmar, and bull/bear ratio. Mandatory quarterly walk-forward review. (6) **CEX bull-window validation** — Binance BTC/USDT:USDT 4h, 2019-10 → 2026-05 (6.7y, 92 trades, 2 bull + 2 bear cycles). Full-window Calmar **7.23**, SQN **1.73**, PF **2.85**, MDD 2.22%, win rate 21.7% — matches Hyperliquid result within noise. Sub-windows: 2020-21 bull Calmar 14.04, 2022 bear Calmar −5.23 (PF 0.00 but MDD 0.28% — strategy correctly stays flat in deep bears), 2023-24 bull Calmar 21.13, 2025 bear Calmar 3.59. **SmaRegime180 graduates to paper-trade candidate.** See `results/2026-05-10-sma-regime-180-cex-bull-validation.md`.
+**Current state:** Full A1 → D2 sprint completed in one session per `decisions/005-evaluation-and-diversity-plan.md`. New evaluation tooling (`scripts/eval_layers.py`) adds Layer-5 metrics (Ulcer, Martin, skew, kurtosis, tail ratio, CVaR-5%) + correlation matrix + 3-flavor MDB. Every strategy re-backtested on Binance common window 2020-09 → 2026-05 (5.5y, 2 bulls + 2 bears, 5-coin universe BTC/ETH/SOL/AVAX/DOGE). Three new strategy families opened: X1 pairs (killed — cointegration absent on crypto majors), X2 cross-sectional momentum (▲ marginal frontier), F1 funding MR (killed by K1-fmr). **Candidate book is now {T3, R∧T2}** — SmaRegime180 (BTC 4h, conservative) + HmmSmaSlopeV2 (5-coin 4h, high return); correlation 0.07, MDB-rp +0.55 robust against {T3} alone. R∧T1/V2/V3 are statistically one strategy (Pearson 0.96-1.00). Internal writeup at `../writeup-2026-05-16.md`. Paper deferred per `decisions/010-paper-plan-deferred.md` until forward held-out window runs.
 
 **Earlier 2026-05-10 experiments:** (1) **Rolling-window HMM refit** (`HmmRegime4Rolling`) on BTC: SQN 0.59 (vs look-ahead's 1.38), win rate 37.7%, return +1.15%. **Look-ahead absorbed ~50% of the alpha**; demotes HmmRegime4 to upper-bound. (2) **Multi-asset HmmRegime4Rolling** on 7 majors: −5.62%, only HYPE/BTC profitable. HMM does not generalise without per-coin tuning. (3) **FundingCarry** threshold-gated long-only on 7 majors: catastrophic −30.16%, all losers stopped at −10%. Naive carry fails in bear. (4) **HmmCarry conjunction** (HMM bull AND funding-negative) on 7 majors: −19.59%, MDD 23.86%. **Worse than HMM alone** — signals are anti-complementary, not independent (HMM is reactive, funding is forward-looking; intersection picks worst moments). Only HYPE/ETH showed expected tightening; BTC win rate collapsed 41.1% → 7.7%. Open items: (1) Reverse-sign HmmCarry (positive funding as bull confirmation); (2) Per-coin funding-sign learning; (3) Lead-lag conjunction (funding-negative *before* HMM-bull turns on); (4) Per-coin HMM hyperparameter sweep with DSR gate; (5) Bull-window CEX backtest as training-set check.
 
@@ -15,6 +15,7 @@ Crypto strategy backtesting setup built on [Freqtrade](https://www.freqtrade.io/
 - [learnings.md](learnings.md) — confirmed facts, open hypotheses, ruled-out directions, search priorities
 - `reference/`
   - [strategy-archetypes.md](reference/strategy-archetypes.md) — canonical reference: 7 strategy archetypes from IMC Prosperity podium writeups, annotated with current project state. Stable reference; findings live in `results/` and `learnings.md`.
+  - [strategy-taxonomy.md](reference/strategy-taxonomy.md) — project-specific family map: every strategy we've built, grouped by signal source (T/R/C) with status tags (★/▲/~/✗). Read this when names get confusing.
 - `decisions/`
   - [001-drop-external-data-repo.md](decisions/001-drop-external-data-repo.md) — removed the `freqtrade_hyperliquid_download-data` gitlink
   - [002-hyperliquid-deep-history.md](decisions/002-hyperliquid-deep-history.md) — accept the 5000-candle API cap; reconstruct from S3 only if needed
@@ -51,18 +52,18 @@ Research summaries added by the weekly paper-search agent. Sorted newest-first. 
 
 Primary sort: **Calmar (closed trades)**. Co-primary: **SQN** (System Quality Number — penalises thin samples; use this when N<30). All metrics are closed-trade unless noted. See `wiki/decisions/003-baseline-eval.md` for the evaluation baseline. CT = closed trades.
 
-| Strategy | Calmar (CT) | SQN | Profit Factor | Sharpe (CT) | CAGR | MDD | Trades | Data | Report |
-|---|---:|---:|---:|---:|---:|---:|---:|---|---|
-| `SmaRegime720` (1h SMA720 + slope gate) | **28.96**² | 0.69 | 3.68 | 0.20 | +1.66% | 0.30% | 6 | BTC 1h, bear, 2025-10-29→2026-04-24 | [2026-04-30](results/2026-04-30-sma-regime-720.md) |
-| `HmmRegime4` (look-ahead, 4-state GaussianHMM, 1h) | 26.35⁴ | 1.38⁴ | 1.58 | 1.23 | +5.26% | 1.03% | 74 | BTC 1h, bear, 2025-11-04→2026-05-09 | [2026-05-09](results/2026-05-09-hmm-regime-4.md) |
-| `HmmRegime4Rolling` (walk-forward refit, 1h) | 12.11 | 0.59 | 1.31 | 0.51 | +2.56% | 1.10% | 53 | BTC 1h, bear, 2025-11-25→2026-05-09 | [2026-05-10](results/2026-05-10-hmm-regime-4-rolling.md) |
-| `SmaRegime180` (4h SMA180 + slope gate) | **8.68**³ | 1.02 | 2.72 | 0.14 | +2.83% | 1.74% | 32 | BTC 4h, full, 2024-02-12→2026-04-24 | [2026-04-30](results/2026-04-30-sma-regime-180.md) |
-| `SmaRegime180` cross-cycle (Binance perp)⁶ | **7.23** | **1.73** | 2.85 | 0.13 | +2.84% | 2.22% | 92 | BTC 4h, 2019-10→2026-05 | [2026-05-10](results/2026-05-10-sma-regime-180-cex-bull-validation.md) |
-| `LongOnlyStrategy` (placeholder SMA cross) | -4.55 | -0.53 | 0.81 | -0.36 | -1.61% | 1.86% | 49 | BTC 1h, bear, 2025-10-06→2026-04-24 | — |
-| `TrendFilter200` (1h SMA200 regime filter) | -6.84 | -2.79 | 0.43 | -2.54 | -5.44% | 4.22% | 90 | BTC 1h, bear, 2025-10-06→2026-04-24 | [2026-04-24](results/2026-04-24-trend-filter-200.md) |
-| `HmmRegime4Rolling` 7-asset portfolio | -4.43 | -0.59 | 0.91 | -1.53 | -12.02% | 14.70% | 504 | 7 majors 1h, bear, 2025-11-25→2026-05-09 | [2026-05-10](results/2026-05-10-hmm-regime-4-multi-asset.md) |
-| `FundingCarry` 7-asset portfolio | -7.35 | -3.60 | 0.28 | -2.57 | — | 42.14% | 47 | 7 majors 1h, bear, 2025-11-04→2026-05-09 | [2026-05-10](results/2026-05-10-funding-carry.md) |
-| `HmmCarry` (conjunction) 7-asset portfolio⁵ | -9.51 | — | 0.55 | -2.09 | — | 23.86% | 278 | 7 majors 1h, bear, 2025-11-25→2026-05-09 | [2026-05-10](results/2026-05-10-hmm-carry-conjunction.md) |
+| Strategy | Calmar (CT) | SQN | PF | Sharpe (CT) | CAGR | MDD | Ulcer⁷ | Trades | Data | Report |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
+| `SmaRegime720` (1h SMA720 + slope gate) | **28.96**² | 0.69 | 3.68 | 0.20 | +1.66% | 0.30% | — | 6 | BTC 1h, bear, 2025-10-29→2026-04-24 | [2026-04-30](results/2026-04-30-sma-regime-720.md) |
+| `HmmRegime4` (look-ahead, 4-state GaussianHMM, 1h) | 26.35⁴ | 1.38⁴ | 1.58 | 1.23 | +5.26% | 1.03% | — | 74 | BTC 1h, bear, 2025-11-04→2026-05-09 | [2026-05-09](results/2026-05-09-hmm-regime-4.md) |
+| `HmmRegime4Rolling` (walk-forward refit, 1h) | 12.11 | 0.59 | 1.31 | 0.51 | +2.56% | 1.10% | — | 53 | BTC 1h, bear, 2025-11-25→2026-05-09 | [2026-05-10](results/2026-05-10-hmm-regime-4-rolling.md) |
+| `SmaRegime180` (4h SMA180 + slope gate) | **8.68**³ | 1.02 | 2.72 | 0.14 | +2.83% | 1.74% | — | 32 | BTC 4h, full, 2024-02-12→2026-04-24 | [2026-04-30](results/2026-04-30-sma-regime-180.md) |
+| `SmaRegime180` cross-cycle (Binance perp)⁶ | **7.23** | **1.73** | 2.85 | 0.13 | +2.84% | 2.22% | — | 92 | BTC 4h, 2019-10→2026-05 | [2026-05-10](results/2026-05-10-sma-regime-180-cex-bull-validation.md) |
+| `LongOnlyStrategy` (placeholder SMA cross) | -4.55 | -0.53 | 0.81 | -0.36 | -1.61% | 1.86% | — | 49 | BTC 1h, bear, 2025-10-06→2026-04-24 | — |
+| `TrendFilter200` (1h SMA200 regime filter) | -6.84 | -2.79 | 0.43 | -2.54 | -5.44% | 4.22% | — | 90 | BTC 1h, bear, 2025-10-06→2026-04-24 | [2026-04-24](results/2026-04-24-trend-filter-200.md) |
+| `HmmRegime4Rolling` 7-asset portfolio | -4.43 | -0.59 | 0.91 | -1.53 | -12.02% | 14.70% | — | 504 | 7 majors 1h, bear, 2025-11-25→2026-05-09 | [2026-05-10](results/2026-05-10-hmm-regime-4-multi-asset.md) |
+| `FundingCarry` 7-asset portfolio | -7.35 | -3.60 | 0.28 | -2.57 | — | 42.14% | — | 47 | 7 majors 1h, bear, 2025-11-04→2026-05-09 | [2026-05-10](results/2026-05-10-funding-carry.md) |
+| `HmmCarry` (conjunction) 7-asset portfolio⁵ | -9.51 | — | 0.55 | -2.09 | — | 23.86% | — | 278 | 7 majors 1h, bear, 2025-11-25→2026-05-09 | [2026-05-10](results/2026-05-10-hmm-carry-conjunction.md) |
 
 ² Calmar unreliable at N=6 (SQN 0.69). SmaRegime180 (N=32, SQN 1.02) is the more meaningful data point for this family.
 
@@ -71,6 +72,8 @@ Primary sort: **Calmar (closed trades)**. Co-primary: **SQN** (System Quality Nu
 ⁴ Calmar inflated by tiny MDD denominator (1.03%). **Look-ahead, upper-bound only.** Honest walk-forward version (`HmmRegime4Rolling`, SQN 0.59) is the comparable number — look-ahead absorbed ~50% of the alpha (return +2.65% → +1.15%, win rate 45.9% → 37.7%). HmmRegime4Rolling is the row to rank against SmaRegime180 (SQN 0.59 vs 1.02 — SmaRegime180 wins on co-primary). Multi-asset run on 7 majors is decisively negative (−5.62%) — HMM does not generalise without per-coin tuning.
 
 ⁵ Conjunction of HmmRegime4Rolling (bull_prob > 0.65) and FundingCarry (funding_roll < threshold). Hypothesis: independent signals → tighter filter. Result: signals are anti-complementary in this window — conjunction is *worse* than HMM alone (−19.59% vs −5.62%). HMM is reactive; funding is forward-looking; intersection picks late-cycle bull lag with early-cycle bear lead. Only HYPE/ETH showed expected tightening; BTC win rate collapsed 41.1% → 7.7%. See result card for reverse-sign and per-coin follow-ups.
+
+⁷ **Ulcer Index** = sqrt(mean(drawdown_pct²)) along the wallet curve. Path-aware companion to MDD — captures *how long* underwater, not just *how deep*. Lower = better. Backfill populated during phase A1.5 re-backtests (per decision 005). Layer-5 tables already added to 6 result cards from `dsr_analysis.py:46-56` runs.
 
 ⁶ Cross-cycle out-of-sample validation. 6.7y of Binance BTC perp 4h covering 2 bull + 2 bear cycles. Sub-window decomposition: 2020-21 bull Calmar 14.04, 2022 bear Calmar −5.23 (PF 0.00 but MDD 0.28% — strategy correctly stays flat), 2023-24 bull Calmar 21.13, 2025 bear Calmar 3.59. Win rate 21.7% identical to Hyperliquid (21.9%). **SmaRegime180 graduates to paper-trade candidate** under decisions/004 kill criteria. Worst regime is 2022-style deep bear: PF goes to 0 but slope-gate filter caps DD at 0.28%. Continuous-shrinkage formula would have shrunk size to ~10% through 2022 without hard-killing.
 
@@ -83,6 +86,70 @@ Primary sort: **Calmar (closed trades)**. Co-primary: **SQN** (System Quality Nu
 **Benchmark:** market change -37.20% (bear window), +61.43% (full 4h window). Long-only trend strategies will underperform buy-and-hold in strong bulls — evaluate on risk-adjusted return (Calmar, SQN), not absolute return.
 
 Rows added here whenever a new strategy is backtested. Link the Report column to the relevant `wiki/results/<date>-<strategy>.md` file.
+
+---
+
+## Common-Window Leaderboard (A1.5, 2026-05-16)
+
+Every strategy re-backtested on Binance perp **2020-09-23 → 2026-05-09 (5.5y, 2 bulls + 2 bears)**, fees `--fee 0.00035`, common evaluation substrate per `decisions/005`. Multi-asset rows use 5-coin universe (BTC/ETH/SOL/AVAX/DOGE). Carry strategies use `CARRY_FUNDING_EXCHANGE=binance`; funding parquets cover only 2022-11 → 2025-02 (~2.3y of the 5.5y window), so carry signals are NaN/inactive outside that sub-window.
+
+Sort: **Calmar descending**. Highlighted = top candidates by family.
+
+**Book composition: {T3, R∧T2}** (both ★). MDB-rp computed against this book — values change when book composition changes.
+
+| Code | Strategy | Data | Calmar | SQN | MDD% | Ulcer | Martin | corr→T3 | MDB-rp¹⁴ | Robust¹¹ | Status |
+|---|---|---|---:|---:|---:|---:|---:|---:|---:|:---:|:---:|
+| **T3** | SmaRegime180 | BTC 4h | **8.76** | 1.78 | **2.21%** | **1.30** | +2.51 | (book) | (book) | (book) | **★** |
+| **R∧T2** | HmmSmaSlopeV2 | 5coin 4h | **30.23** | 2.73 | 6.05%⁸ | 2.87 | **+7.41** | (book) | (book) | (book) | **★** |
+| R∧T3 | HmmSmaSlopeV3 | 5coin 4h | 27.28 | 2.79 | 6.91% | 3.30 | +6.58 | +0.07 | −0.023 | no | ▲¹² |
+| R∧T1 | HmmSmaSlope | 5coin 4h | 25.01 | 2.97 | 8.21% | 3.82 | +6.00 | +0.07 | +0.012 | no | ▲¹² |
+| R1~ | HmmRegime4 (look-ahead) | BTC 1h | 9.16⁹ | 3.88 | 2.94% | 1.09 | +4.24 | +0.00 | +0.07 | YES | ~ |
+| T2 | SmaRegime720 | BTC 1h | 5.39 | 1.74 | 3.57% | 1.75 | +1.82 | +0.65 | −0.023 | no | ▲ |
+| T1 | TrendFilter200 | BTC 1h | 1.69 | 1.10 | 8.54% | 3.79 | +0.67 | −0.00 | +0.040 | YES | ▲ |
+| **X2** | CrossSectionalMomentum | 5coin 4h | — | — | 13.04% | — | — | +0.00 | +0.048 | YES | ▲¹⁵ |
+| R2x | HmmRegime4Rolling 5-coin | 5coin 1h | 3.79 | 1.66 | 21.47% | 10.25 | +1.15 | −0.01 | +0.069 | YES | ✗¹³ |
+| R2 | HmmRegime4Rolling | BTC 1h | 0.47 | 0.39 | 7.65% | 4.01 | +0.17 | +0.01 | +0.010 | YES¹⁶ | ✗ |
+| **X1** | PairsZScore (SOL-DOGE) | 4h | — | — | 4.03% | — | — | +0.00 | **−0.898** | no | ✗¹⁷ |
+| C1 | FundingCarry 5-coin¹⁰ | 5coin 1h | 1.37 | 1.28 | 8.52% | 2.80 | +0.76 | −0.09 | −0.825 | no | ✗ |
+| R∧C1 | HmmCarry 5-coin | 5coin 1h | 0.08 | 0.14 | 35.46% | 9.57 | +0.04 | +0.00 | −0.000 | no | ✗ |
+| **F1** | FundingExtremeMR | 5coin 4h | — | — | 29.94% | — | — | −0.01 | **−1.845** | no | ✗¹⁸ |
+| T0 | LongOnlyStrategy | BTC 1h | −0.37 | −0.58 | 10.17% | 6.26 | −0.11 | −0.00 | −0.009 | no | · |
+
+⁸ **R∧T2's 6.05% MDD breaches K1 by 0.55pp BUT MDB-rp = +0.55 robust.** A2 correlation matrix resolved the question: R∧T2 is *portfolio-justified* — adding it to T3 increases portfolio Sharpe by 0.55 (robust across all 3 MDB schemes). Standalone MDD breach is real but contained; deploy at smaller size in a 2-strategy book. Recommend updating K1 in decision 004 to apply per-strategy with portfolio-aware exception: if MDB-rp > 0.3 robust, accept up to 8% MDD provided book is ≥2 strategies. (Open: write `decisions/009-kill-criteria-portfolio.md`.)
+
+⁹ **R1 (HmmRegime4 look-ahead) is the unbeatable ceiling — not tradeable.** Listed for context only.
+
+¹⁰ FundingCarry 5-coin survives on Binance common window where it died on Hyperliquid bear (−30.16% → +2.13%). Funding parquet only covers 2022-11 → 2025-02 of the 5.5y window, so most of the period the strategy is flat (carry signal NaN). Not a clean cross-cycle validation. Defer judgment until A1.5 funding data is extended.
+
+¹¹ **Robust** = MDB > 0 under all three weighting schemes (eq, rp, mv). See `wiki/methodology/correlation-and-mdb.md`. Strategies marked YES are robustly portfolio-additive vs the current book (T3 alone).
+
+¹² R∧T1/V2/V3 collapse to one effective strategy under correlation: pairwise Pearson 0.98-1.00, Spearman 0.96-0.97. V2 chosen as ★ representative (best Calmar/MDD pair); V1/V3 demoted to ▲ research-frontier. Use V2 in any combined book.
+
+¹³ R2x is robust-positive MDB-rp (+0.07) but standalone MDD 21.47% / Ulcer 10.25 is unacceptable. Could only be deployed at very small size; not a serious paper-trade candidate. Documented as research frontier point only.
+
+¹⁴ **MDB-rp values changed** when the book expanded from {T3} to {T3, R∧T2}. R∧T1/V3 went from robust-positive to non-robust because they overlap entirely with R∧T2 (Pearson 0.96-1.00) — the second strategy already absorbs their signal. This is the methodology behaving correctly: each strategy is evaluated against what the book *currently* contains. Old MDB values vs book = {T3} alone preserved in `wiki/results/_correlation_table.json` v1 archive.
+
+¹⁵ **X2 CrossSectionalMomentum**: robust-positive MDB-rp +0.048. Standalone MDD 13.04% **breaches K1-xs (12%) by 1pp** — per `decisions/007-kill-criteria-cross-sectional.md`, this is a hard kill on standalone metrics. But MDB-rp robust positive means the strategy adds to the portfolio book. Decision deferred until human-review of the K1-xs threshold (analogous to R∧T2 case). Documented as ▲ frontier pending decision 009.
+
+¹⁶ R2 has technically-robust MDB but values are vanishingly small (+0.010, +0.011, +0.012). Practical interpretation: this is statistical noise, not a real diversification signal. Kept ✗ status.
+
+¹⁷ **X1 PairsZScore**: cointegration on crypto majors is essentially absent (preflight pass rate 7.4% for best pair SOL-DOGE; 1.3% for BTC-ETH). Strategy correctly stays mostly flat (10 trades over 5.6y) due to K2-pairs gate. Standalone +8.66% / MDD 4.03% looks fine but trade count is too low for DSR. **MDB-rp −0.898** because the very-low-vol strategy receives oversized risk-parity weight without enough return to justify it. Killed. Two-leg V2 (planned upgrade) might rescue this; deferred to follow-up sprint.
+
+¹⁸ **F1 FundingExtremeMR**: counter-funding mean-reversion thesis fails on common window. MDD 29.94% breaches K1-fmr (5%) by 6×. MDB-rp −1.845. Le 2026's 8h half-life calibration likely doesn't translate to 4h-bar execution on Binance with sparse funding data (parquet covers 2.3y of 5.6y). Killed. Future variants might try (a) 1h timeframe with hourly funding, (b) absolute funding threshold instead of z-score, (c) full Binance funding history.
+
+### Key changes vs prior leaderboard
+
+1. **Two-strategy candidate book**: T3 + R∧T2. Both ★. Correlation 0.07 → orthogonal. MDB-rp = +0.55 robust → R∧T2 is portfolio-justified despite single-strategy K1 breach.
+2. **R∧T1/V2/V3 are statistically one strategy** (Pearson 0.98-1.00). V2 selected as representative; V1/V3 demoted to ▲.
+3. **T3 still wins on conservative metrics**: lowest MDD/Ulcer/Pain. R∧T2 wins on return-per-unit-pain (Martin +7.41 vs +2.51). Book uses both.
+4. **R2 confirmed killed**: Calmar 0.47, Ulcer 4.01, Pain 3.47 — chronic underwater. K1 supported, not exaggerated.
+5. **R2x (multi-asset HMM) catastrophic standalone but robust-positive MDB**: Calmar 3.79, MDD 21.47%, MDB-rp +0.13. Research-frontier only — too risky to deploy.
+6. **C1 (FundingCarry) ambiguous**: MDB-rp −0.28 (not portfolio-additive) despite Calmar 1.37 standalone. High-vol diluter under risk-parity.
+7. **R∧C1 (HmmCarry conjunction) confirmed dead cross-cycle**: MDD 35.46%, MDB negative everywhere.
+
+### Correlation heatmap
+
+![correlation matrix](assets/correlation_matrix.png)
 
 ---
 

@@ -27,6 +27,20 @@ One paragraph: what edge is this strategy trying to capture, and why should it e
 
 Paste the raw `freqtrade backtesting` summary block below if useful.
 
+### Layer 5 — Tail / Path shape
+
+Generate with: `./freqtrade/.venv/bin/python scripts/eval_layers.py <zip_path>`
+
+| Metric | Value | Reading |
+|---|---:|---|
+| Skew | — | … |
+| Excess kurtosis | — | … |
+| Tail ratio (\|P95\|/\|P5\|) | — | … |
+| CVaR-5% (daily) | — | mean loss on worst 5% of days |
+| Ulcer Index | — | path-aware DD (lower = better) |
+| Martin ratio | — | CAGR per unit ulcer |
+| Pain index | — | mean abs drawdown |
+
 ---
 
 ## What worked

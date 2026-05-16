@@ -101,3 +101,40 @@ The sizing exponent has become a **continuous tuning knob** that traces the conj
 ```
 
 Archives: `hmm_sma_slope_v3_binance_bull.zip`, `hmm_sma_slope_v3_hl_bear.zip`.
+
+---
+
+## Layer 5 — Tail / Path shape (added 2026-05-16)
+
+Backfilled per decision 005 (`wiki/decisions/005-evaluation-and-diversity-plan.md`). Generated with `scripts/eval_layers.py`.
+
+
+**Binance bull**
+
+| Metric | Value | Reading |
+|---|---:|---|
+| Skew | +9.21 | right-tailed (rare big wins) |
+| Excess kurtosis | +114.28 | fat-tailed (Sharpe overstates) |
+| Tail ratio (\|P95\|/\|P5\|) | 0.67 | losers > winners in size |
+| CVaR-5% (daily) | -0.79% | mean loss on worst 5% of days |
+| Ulcer Index | 2.69 | path-aware DD (lower = better) |
+| Martin ratio | 6.18 | CAGR per unit ulcer (higher = better) |
+| Pain index | 2.03 | mean abs drawdown |
+
+_N_obs (daily): 792_
+
+
+**Hyperliquid bear**
+
+| Metric | Value | Reading |
+|---|---:|---|
+| Skew | +2.25 | right-tailed (rare big wins) |
+| Excess kurtosis | +37.92 | fat-tailed (Sharpe overstates) |
+| Tail ratio (\|P95\|/\|P5\|) | 0.00 | losers > winners in size |
+| CVaR-5% (daily) | -0.57% | mean loss on worst 5% of days |
+| Ulcer Index | 2.89 | path-aware DD (lower = better) |
+| Martin ratio | -2.36 | CAGR per unit ulcer (higher = better) |
+| Pain index | 2.13 | mean abs drawdown |
+
+_N_obs (daily): 206_
+

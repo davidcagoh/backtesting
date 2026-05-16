@@ -97,3 +97,25 @@ CARRY_FUNDING_EXCHANGE=binance ./freqtrade/.venv/bin/freqtrade backtesting \
 ```
 
 Result archive: `user_data/backtest_results/funding_carry_binance_bull_2023_2025.zip`
+
+---
+
+## Layer 5 — Tail / Path shape (added 2026-05-16)
+
+Backfilled per decision 005 (`wiki/decisions/005-evaluation-and-diversity-plan.md`). Generated with `scripts/eval_layers.py`.
+
+
+**Binance bull 2023-2025**
+
+| Metric | Value | Reading |
+|---|---:|---|
+| Skew | +1.32 | right-tailed (rare big wins) |
+| Excess kurtosis | +30.98 | fat-tailed (Sharpe overstates) |
+| Tail ratio (\|P95\|/\|P5\|) | 1.89 | winners > losers in size |
+| CVaR-5% (daily) | -0.87% | mean loss on worst 5% of days |
+| Ulcer Index | 5.49 | path-aware DD (lower = better) |
+| Martin ratio | 1.10 | CAGR per unit ulcer (higher = better) |
+| Pain index | 4.05 | mean abs drawdown |
+
+_N_obs (daily): 731_
+

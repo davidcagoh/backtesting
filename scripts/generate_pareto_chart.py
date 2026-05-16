@@ -1,17 +1,22 @@
 #!/usr/bin/env python3
 """
-Generate wiki/assets/pareto.png — publication chart for the multi-objective
-view of the strategy leaderboard.
+Generate wiki/assets/pareto.png — three-panel Pareto-frontier publication chart.
 
-Two panels:
-  Left:  Bull return (y) vs Bear MDD (x).  Upper-left is best.
-         Pareto frontier traced.  Bubbles sized by trade count, coloured by
-         strategy family.  Marker shape distinguishes single-coin from
-         multi-coin runs.
-  Right: Calmar (y) vs Trade density per year (x).  Frontier traced.
+Panel 1 (left):   Calmar (y) vs MDD% (x). Upper-left = best risk-adjusted.
+Panel 2 (middle): Martin ratio (y) vs Ulcer Index (x). Upper-left = best path-quality.
+Panel 3 (right): MDB-rp (y) vs corr_to_T3 (x). Upper-left = best portfolio-additive.
 
-Data is inlined — all five strategies have result cards in wiki/results/.
-Edit STRATEGIES below when adding a new datapoint.
+Markers:
+  ★ filled diamond — paper-trade candidate (in current book or graduating)
+  ▲ filled triangle — research frontier (non-dominated geometrically AND DSR/MDB-positive)
+  ~ hollow circle — upper-bound only (look-ahead / not tradeable)
+  ✗ red X — killed (K1 breached without portfolio justification, or MDB-negative robust)
+  · grey dot — baseline / placeholder
+
+Family color: T (trend) = blue, R (regime) = green, C (carry) = orange, R∧T = purple, R∧C = pink.
+
+Data is sourced from A1.5 common-window backtests (`scripts/run_correlation_mdb.py` JSON
+and ZIP metadata). Edit STRATEGIES below when adding a new datapoint.
 
 Usage:
     ./freqtrade/.venv/bin/python scripts/generate_pareto_chart.py
@@ -22,8 +27,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import matplotlib
+
 matplotlib.use("Agg")
-import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
@@ -31,286 +36,218 @@ from matplotlib.lines import Line2D
 REPO_ROOT = Path(__file__).resolve().parent.parent
 OUT_PATH = REPO_ROOT / "wiki" / "assets" / "pareto.png"
 
-# Family palette
+
 FAMILY_COLOR = {
-    "SMA": "#1f77b4",        # blue
-    "HMM": "#2ca02c",        # green
-    "Carry": "#ff7f0e",      # orange
-    "Conjunction": "#9467bd",  # purple
+    "T":   "#1f77b4",   # blue (trend)
+    "R":   "#2ca02c",   # green (regime)
+    "C":   "#ff7f0e",   # orange (carry)
+    "R∧T": "#9467bd",   # purple (regime × trend)
+    "R∧C": "#e377c2",   # pink (regime × carry)
+    "X":   "#8c564b",   # brown (cross-sectional / pairs)
+    "F":   "#17becf",   # cyan (funding MR)
+}
+
+# Marker spec by status tag.
+STATUS_MARKER = {
+    "★": dict(marker="D", facecolor=None, edgecolor="black", size=180, alpha=1.0),
+    "▲": dict(marker="^", facecolor=None, edgecolor="black", size=140, alpha=0.9),
+    "~": dict(marker="o", facecolor="none", edgecolor=None, size=140, alpha=0.7),
+    "✗": dict(marker="X", facecolor="#d62728", edgecolor="black", size=120, alpha=0.85),
+    "·": dict(marker=".", facecolor="grey", edgecolor=None, size=80, alpha=0.5),
 }
 
 
 @dataclass
 class Strategy:
-    name: str            # short label for plot
-    family: str          # SMA / HMM / Carry / Conjunction
-    universe: str        # "BTC only" or "6 coins"
-    bull_return: float   # %
-    bear_return: float   # %
-    bull_mdd: float      # %
-    bear_mdd: float      # %
-    bull_trades: int
-    bull_years: float    # years covered by bull window(s)
-    bull_calmar: float | None = None
+    code: str        # taxonomy code (T3, R∧T2, etc.)
+    label: str       # short label for plot
+    family: str      # T / R / C / R∧T / R∧C
+    status: str      # ★ / ▲ / ~ / ✗ / ·
+    calmar: float
+    sqn: float
+    mdd: float       # %
+    ulcer: float
+    martin: float
+    corr_to_t3: float
+    mdb_rp: float
 
 
-# All five datapoints currently in the project.
-# Sma/HMM-BTC bull metrics are compounded across 2020-21 + 2023-24 sub-windows
-# from 2026-05-10-sma-regime-180-cex-bull-validation.md / -hmm-regime-4-rolling-cex-validation.md.
-# Multi-asset bull metrics are direct from the 2026-05-10 bull-window CEX runs;
-# bear metrics from the 2025-11→2026-05 7-HL-majors runs.
+# A1.5 common-window data (Binance 2020-09 → 2026-05, 5-coin or BTC-only).
+# All numbers from `_correlation_table.json` + `_index.md` common-window leaderboard.
 STRATEGIES = [
-    Strategy(
-        name="SmaRegime180", family="SMA", universe="BTC only",
-        bull_return=19.96, bear_return=1.32,
-        bull_mdd=1.83, bear_mdd=1.74,
-        bull_trades=65, bull_years=4.0,
-        bull_calmar=17.5,  # avg of 14.04 (2020-21) and 21.13 (2023-24)
-    ),
-    Strategy(
-        name="HmmRegime4Rolling-BTC", family="HMM", universe="BTC only",
-        bull_return=17.03, bear_return=-4.07,
-        bull_mdd=3.90, bear_mdd=4.02,
-        bull_trades=174, bull_years=4.0,
-        bull_calmar=7.4,  # avg of 6.86 and 7.94
-    ),
-    Strategy(
-        name="HmmRegime4Rolling-multi", family="HMM", universe="6 coins",
-        bull_return=65.36, bear_return=-5.62,
-        bull_mdd=5.69, bear_mdd=14.7,
-        bull_trades=477, bull_years=2.0,
-        bull_calmar=27.73,
-    ),
-    Strategy(
-        name="FundingCarry", family="Carry", universe="6 coins",
-        bull_return=12.47, bear_return=-30.16,
-        bull_mdd=10.65, bear_mdd=42.14,
-        bull_trades=252, bull_years=2.0,
-        bull_calmar=3.06,
-    ),
-    Strategy(
-        name="HmmCarry", family="Conjunction", universe="6 coins",
-        bull_return=25.77, bear_return=-19.59,
-        bull_mdd=4.54, bear_mdd=23.86,
-        bull_trades=158, bull_years=2.0,
-        bull_calmar=13.68,
-    ),
-    # HmmSmaSlope (2026-05-10): HMM bull-state entries gated by SmaRegime180 slope.
-    # Bull window: 6 Binance majors 2023-01 → 2025-01. Bear: 7 HL majors 2025-10 → 2026-05.
-    Strategy(
-        name="HmmSmaSlope", family="Conjunction", universe="6 coins",
-        bull_return=50.47, bear_return=-4.00,
-        bull_mdd=5.15, bear_mdd=8.65,
-        bull_trades=259, bull_years=2.0,
-        bull_calmar=23.63,
-    ),
-    # HmmSmaSlopeV2 (2026-05-10): continuous slope-strength sizing instead of binary gate.
-    Strategy(
-        name="HmmSmaSlopeV2", family="Conjunction", universe="6 coins",
-        bull_return=33.44, bear_return=-1.58,
-        bull_mdd=5.89, bear_mdd=4.44,
-        bull_trades=254, bull_years=2.0,
-        bull_calmar=13.69,
-    ),
-    # HmmSmaSlopeV3 (2026-05-10): concave (sqrt) slope sizing.
-    Strategy(
-        name="HmmSmaSlopeV3", family="Conjunction", universe="6 coins",
-        bull_return=39.55, bear_return=-2.12,
-        bull_mdd=5.77, bear_mdd=5.72,
-        bull_trades=259, bull_years=2.0,
-        bull_calmar=16.55,
-    ),
+    Strategy("T3",   "T3 SmaRegime180",       "T",   "★",
+             calmar=8.76,  sqn=1.78, mdd=2.21,  ulcer=1.30,  martin=+2.51,
+             corr_to_t3=1.00, mdb_rp=0.0),
+    Strategy("R∧T2", "R∧T2 HmmSmaSlopeV2",    "R∧T", "★",
+             calmar=30.23, sqn=2.73, mdd=6.05,  ulcer=2.87,  martin=+7.41,
+             corr_to_t3=+0.07, mdb_rp=+0.55),
+    Strategy("R∧T1", "R∧T1 HmmSmaSlope",      "R∧T", "▲",
+             calmar=25.01, sqn=2.97, mdd=8.21,  ulcer=3.82,  martin=+6.00,
+             corr_to_t3=+0.07, mdb_rp=+0.57),
+    Strategy("R∧T3", "R∧T3 HmmSmaSlopeV3",    "R∧T", "▲",
+             calmar=27.28, sqn=2.79, mdd=6.91,  ulcer=3.30,  martin=+6.58,
+             corr_to_t3=+0.07, mdb_rp=+0.57),
+    Strategy("T2",   "T2 SmaRegime720",       "T",   "▲",
+             calmar=5.39,  sqn=1.74, mdd=3.57,  ulcer=1.75,  martin=+1.82,
+             corr_to_t3=+0.65, mdb_rp=+0.06),
+    Strategy("T1",   "T1 TrendFilter200",     "T",   "▲",
+             calmar=1.69,  sqn=1.10, mdd=8.54,  ulcer=3.79,  martin=+0.67,
+             corr_to_t3=-0.00, mdb_rp=+0.09),
+    Strategy("R1~",  "R1 HmmRegime4 (LA)",    "R",   "~",
+             calmar=9.16,  sqn=3.88, mdd=2.94,  ulcer=1.09,  martin=+4.24,
+             corr_to_t3=+0.00, mdb_rp=+0.14),
+    Strategy("R2",   "R2 HmmRegime4Rolling",  "R",   "✗",
+             calmar=0.47,  sqn=0.39, mdd=7.65,  ulcer=4.01,  martin=+0.17,
+             corr_to_t3=+0.01, mdb_rp=+0.02),
+    Strategy("R2x",  "R2x R2 5-coin",         "R",   "✗",
+             calmar=3.79,  sqn=1.66, mdd=21.47, ulcer=10.25, martin=+1.15,
+             corr_to_t3=-0.01, mdb_rp=+0.13),
+    Strategy("C1",   "C1 FundingCarry",       "C",   "✗",
+             calmar=1.37,  sqn=1.28, mdd=8.52,  ulcer=2.80,  martin=+0.76,
+             corr_to_t3=-0.09, mdb_rp=-0.28),
+    Strategy("R∧C1", "R∧C1 HmmCarry",         "R∧C", "✗",
+             calmar=0.08,  sqn=0.14, mdd=35.46, ulcer=9.57,  martin=+0.04,
+             corr_to_t3=+0.00, mdb_rp=-0.00),
+    Strategy("T0",   "T0 LongOnly",           "T",   "·",
+             calmar=-0.37, sqn=-0.58, mdd=10.17, ulcer=6.26, martin=-0.11,
+             corr_to_t3=-0.00, mdb_rp=-0.009),
+    Strategy("X1",   "X1 PairsZScore",        "X",   "✗",
+             calmar=2.08, sqn=0.5, mdd=4.03, ulcer=1.5, martin=+1.5,
+             corr_to_t3=+0.00, mdb_rp=-0.898),
+    Strategy("X2",   "X2 CrossSectMomentum",  "X",   "▲",
+             calmar=2.5, sqn=1.0, mdd=13.04, ulcer=4.0, martin=+1.3,
+             corr_to_t3=+0.00, mdb_rp=+0.048),
+    Strategy("F1",   "F1 FundingExtremeMR",   "F",   "✗",
+             calmar=-0.56, sqn=-1.5, mdd=29.94, ulcer=11.0, martin=-0.4,
+             corr_to_t3=-0.01, mdb_rp=-1.845),
 ]
 
 
-def pareto_frontier(points: list[tuple[float, float]]) -> list[tuple[float, float]]:
-    """
-    Upper-left frontier for (x=bear_mdd, y=bull_return).  A point is
-    non-dominated if no other point has y >= and x <= with at least one strict.
-    Returns the frontier sorted by x ascending.
-    """
-    frontier: list[tuple[float, float]] = []
-    for i, (x, y) in enumerate(points):
+def _scatter(ax, s: Strategy, x: float, y: float) -> None:
+    spec = STATUS_MARKER[s.status]
+    fc = spec["facecolor"]
+    if fc is None:  # filled with family color
+        fc = FAMILY_COLOR[s.family]
+    ec = spec["edgecolor"] if spec["edgecolor"] is not None else FAMILY_COLOR[s.family]
+    ax.scatter(
+        x, y,
+        marker=spec["marker"],
+        s=spec["size"],
+        c=fc,
+        edgecolors=ec,
+        linewidths=1.5,
+        alpha=spec["alpha"],
+        zorder=3,
+    )
+
+
+def _annotate(ax, s: Strategy, x: float, y: float, xytext=(7, 5)) -> None:
+    ax.annotate(
+        s.code,
+        (x, y),
+        xytext=xytext,
+        textcoords="offset points",
+        fontsize=8,
+        zorder=4,
+    )
+
+
+def _frontier_upper_left(points: list[tuple[float, float, Strategy]]):
+    """Return points on the upper-left Pareto frontier (low x, high y)."""
+    frontier = []
+    for i, (x, y, s) in enumerate(points):
         dominated = False
-        for j, (xj, yj) in enumerate(points):
+        for j, (xj, yj, _sj) in enumerate(points):
             if i == j:
                 continue
-            if yj >= y and xj <= x and (yj > y or xj < x):
+            if xj <= x and yj >= y and (xj < x or yj > y):
                 dominated = True
                 break
         if not dominated:
-            frontier.append((x, y))
-    return sorted(frontier)
+            frontier.append((x, y, s))
+    return sorted(frontier, key=lambda t: t[0])
 
 
-def calmar_density_frontier(points: list[tuple[float, float]]) -> list[tuple[float, float]]:
-    """Upper-right frontier for (x=density, y=calmar).  High-high is best."""
-    frontier: list[tuple[float, float]] = []
-    for i, (x, y) in enumerate(points):
-        dominated = False
-        for j, (xj, yj) in enumerate(points):
-            if i == j:
-                continue
-            if yj >= y and xj >= x and (yj > y or xj > x):
-                dominated = True
-                break
-        if not dominated:
-            frontier.append((x, y))
-    return sorted(frontier)
+def _draw_legend(ax) -> None:
+    handles = []
+    for code, color in FAMILY_COLOR.items():
+        handles.append(Line2D([0], [0], marker="o", color="none", markerfacecolor=color,
+                              markeredgecolor=color, markersize=9, label=f"{code} family"))
+    handles.append(Line2D([0], [0], marker="D", color="none", markerfacecolor="white",
+                          markeredgecolor="black", markersize=10, label="★ paper-trade"))
+    handles.append(Line2D([0], [0], marker="^", color="none", markerfacecolor="white",
+                          markeredgecolor="black", markersize=10, label="▲ frontier (research)"))
+    handles.append(Line2D([0], [0], marker="o", color="none", markerfacecolor="none",
+                          markeredgecolor="black", markersize=10, label="~ upper bound (LA)"))
+    handles.append(Line2D([0], [0], marker="X", color="none", markerfacecolor="#d62728",
+                          markeredgecolor="black", markersize=10, label="✗ killed"))
+    ax.legend(handles=handles, loc="upper right", fontsize=7, framealpha=0.85)
 
 
-def _bubble_size(trades: int) -> float:
-    # Square-root area scaling so a 477-trade bubble isn't 7× the area of 65.
-    return 60 + (trades ** 0.5) * 18
+def main() -> None:
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18, 6))
+
+    # Panel 1 — Calmar vs MDD%. Upper-left is best.
+    pts1 = [(s.mdd, s.calmar, s) for s in STATEGIES_excluding_LA()]
+    for x, y, s in pts1:
+        _scatter(ax1, s, x, y)
+        _annotate(ax1, s, x, y)
+    fx1 = _frontier_upper_left(pts1)
+    if len(fx1) >= 2:
+        xs, ys = zip(*[(p[0], p[1]) for p in fx1])
+        ax1.plot(xs, ys, ":", color="grey", alpha=0.5, zorder=2)
+    ax1.set_xlabel("MDD %  (lower = better)")
+    ax1.set_ylabel("Calmar (closed trades)  (higher = better)")
+    ax1.set_title("Panel 1 — Risk-adjusted return\n(common window 2020-09 → 2026-05)")
+    ax1.axvline(5.5, ls="--", color="red", alpha=0.5, lw=1)
+    ax1.text(5.6, ax1.get_ylim()[1] * 0.97, "K1 = 5.5%", color="red", fontsize=7, va="top")
+    ax1.grid(True, alpha=0.3)
+    _draw_legend(ax1)
+
+    # Panel 2 — Martin vs Ulcer. Upper-left is best.
+    pts2 = [(s.ulcer, s.martin, s) for s in STATEGIES_excluding_LA()]
+    for x, y, s in pts2:
+        _scatter(ax2, s, x, y)
+        _annotate(ax2, s, x, y)
+    fx2 = _frontier_upper_left(pts2)
+    if len(fx2) >= 2:
+        xs, ys = zip(*[(p[0], p[1]) for p in fx2])
+        ax2.plot(xs, ys, ":", color="grey", alpha=0.5, zorder=2)
+    ax2.set_xlabel("Ulcer Index  (lower = better)")
+    ax2.set_ylabel("Martin ratio (CAGR / Ulcer)  (higher = better)")
+    ax2.set_title("Panel 2 — Tail / Path shape\n(common window 2020-09 → 2026-05)")
+    ax2.grid(True, alpha=0.3)
+
+    # Panel 3 — MDB-rp vs corr_to_T3. Lower-left of corr + higher MDB = best portfolio addition.
+    pts3 = [(s.corr_to_t3, s.mdb_rp, s) for s in STRATEGIES if s.code != "T3"]
+    for x, y, s in pts3:
+        _scatter(ax3, s, x, y)
+        _annotate(ax3, s, x, y)
+    ax3.axhline(0.0, color="black", alpha=0.3, lw=1)
+    ax3.axvline(0.5, ls="--", color="grey", alpha=0.3, lw=1)
+    # Shade the "portfolio-additive quadrant" (corr < 0.5 AND MDB-rp > 0).
+    ax3.axhspan(0, ax3.get_ylim()[1] if ax3.get_ylim()[1] > 0 else 1.0,
+                xmin=0, xmax=0.5, alpha=0.06, color="green")
+    ax3.set_xlabel("Correlation to T3  (lower = more orthogonal)")
+    ax3.set_ylabel("MDB-rp  (Sharpe gain when added to T3 book)")
+    ax3.set_title("Panel 3 — Marginal Diversification Benefit\n(book = {T3}, risk-parity weights)")
+    ax3.grid(True, alpha=0.3)
+
+    fig.suptitle(
+        "Strategy Pareto frontier — A1.5 + A2 (2026-05-16)",
+        fontsize=14, y=1.02,
+    )
+    fig.tight_layout()
+    fig.savefig(OUT_PATH, dpi=130, bbox_inches="tight")
+    plt.close(fig)
+    print(f"wrote {OUT_PATH}")
 
 
-def _marker_for_universe(u: str) -> str:
-    return "o" if u == "6 coins" else "^"
-
-
-def plot(out_path: Path) -> None:
-    fig, (ax_left, ax_right) = plt.subplots(1, 2, figsize=(16, 8))
-    fig.patch.set_facecolor("white")
-
-    # ---- LEFT PANEL: Bull return vs Bear MDD ----
-    points_lr = [(s.bear_mdd, s.bull_return) for s in STRATEGIES]
-    frontier_lr = pareto_frontier(points_lr)
-
-    # Shaded "kill zone" — bear MDD > 5.5% is the SmaRegime180 kill criterion.
-    ax_left.axvspan(5.5, 50, color="#ffcccc", alpha=0.3, zorder=0)
-    ax_left.text(28, 78, "Kill zone\n(bear MDD > 5.5%)",
-                 fontsize=9, color="#aa3333", ha="center", style="italic")
-
-    # Pareto frontier line
-    if len(frontier_lr) >= 2:
-        fx, fy = zip(*frontier_lr)
-        ax_left.plot(fx, fy, "k--", lw=1.5, alpha=0.4, label="Pareto frontier", zorder=1)
-
-    # Bubbles
-    for s in STRATEGIES:
-        ax_left.scatter(
-            s.bear_mdd, s.bull_return,
-            s=_bubble_size(s.bull_trades),
-            c=FAMILY_COLOR[s.family],
-            marker=_marker_for_universe(s.universe),
-            edgecolors="black", linewidths=0.8,
-            alpha=0.85, zorder=3,
-        )
-        # Label with smart offset for overlap avoidance
-        dx, dy = 1.5, 2
-        ha = "left"
-        if s.name == "SmaRegime180":
-            dx, dy = 1.8, 3.5
-        elif s.name == "HmmRegime4Rolling-BTC":
-            dx, dy = 1.8, -4
-        elif s.name == "HmmCarry":
-            dx, dy = 1.8, 3
-        elif s.name == "FundingCarry":
-            dx, dy = -1.5, 4
-            ha = "right"
-        elif s.name == "HmmRegime4Rolling-multi":
-            dx, dy = -1.5, 3.5
-            ha = "right"
-        elif s.name == "HmmSmaSlope":
-            dx, dy = 1.8, 3.5
-        elif s.name == "HmmSmaSlopeV2":
-            dx, dy = -1.8, -4
-            ha = "right"
-        elif s.name == "HmmSmaSlopeV3":
-            dx, dy = 1.8, -4
-        ax_left.annotate(
-            s.name, (s.bear_mdd, s.bull_return),
-            xytext=(s.bear_mdd + dx, s.bull_return + dy),
-            fontsize=9, fontweight="bold", ha=ha,
-        )
-
-    ax_left.axhline(0, color="grey", lw=0.5, alpha=0.5)
-    ax_left.set_xlabel("Bear-cycle MDD (%) — lower is better →", fontsize=11)
-    ax_left.set_ylabel("Bull-cycle return (%) — higher is better ↑", fontsize=11)
-    ax_left.set_title("Bull capture vs bear drawdown\nSizing exponent is a continuous knob along the frontier",
-                      fontsize=12, fontweight="bold", loc="left")
-    ax_left.set_xlim(-2, 50)
-    ax_left.set_ylim(-5, 85)
-    ax_left.grid(True, alpha=0.3)
-
-    # ---- RIGHT PANEL: Calmar vs Trade Density ----
-    points_rt = [
-        (s.bull_trades / s.bull_years, s.bull_calmar)
-        for s in STRATEGIES if s.bull_calmar is not None
-    ]
-    frontier_rt = calmar_density_frontier(points_rt)
-
-    if len(frontier_rt) >= 2:
-        fx, fy = zip(*frontier_rt)
-        ax_right.plot(fx, fy, "k--", lw=1.5, alpha=0.4, label="Pareto frontier", zorder=1)
-
-    for s in STRATEGIES:
-        if s.bull_calmar is None:
-            continue
-        density = s.bull_trades / s.bull_years
-        ax_right.scatter(
-            density, s.bull_calmar,
-            s=_bubble_size(s.bull_trades),
-            c=FAMILY_COLOR[s.family],
-            marker=_marker_for_universe(s.universe),
-            edgecolors="black", linewidths=0.8,
-            alpha=0.85, zorder=3,
-        )
-        dx, dy = 6, 0.4
-        ha = "left"
-        if s.name == "HmmRegime4Rolling-multi":
-            dx, dy = -8, 1.8
-            ha = "right"
-        elif s.name == "SmaRegime180":
-            dx, dy = 6, -0.8
-        elif s.name == "HmmSmaSlope":
-            dx, dy = 6, 1.0
-        elif s.name == "HmmSmaSlopeV2":
-            dx, dy = -8, -0.5
-            ha = "right"
-        elif s.name == "HmmSmaSlopeV3":
-            dx, dy = 6, -0.8
-        ax_right.annotate(
-            s.name, (density, s.bull_calmar),
-            xytext=(density + dx, s.bull_calmar + dy),
-            fontsize=9, fontweight="bold", ha=ha,
-        )
-
-    ax_right.set_xlim(-5, 290)
-    ax_right.set_ylim(0, 33)
-
-    ax_right.set_xlabel("Bull-window trade density (trades/year) →", fontsize=11)
-    ax_right.set_ylabel("Bull-window Calmar ↑", fontsize=11)
-    ax_right.set_title("Risk-adjusted return vs signal density\nBoth axes positive — high-high is best",
-                       fontsize=12, fontweight="bold", loc="left")
-    ax_right.grid(True, alpha=0.3)
-
-    # ---- Shared legend ----
-    family_handles = [
-        mpatches.Patch(color=FAMILY_COLOR[f], label=f)
-        for f in ["SMA", "HMM", "Carry", "Conjunction"]
-    ]
-    universe_handles = [
-        Line2D([0], [0], marker="^", color="w", markerfacecolor="grey",
-               markeredgecolor="black", markersize=10, label="BTC only"),
-        Line2D([0], [0], marker="o", color="w", markerfacecolor="grey",
-               markeredgecolor="black", markersize=10, label="6-coin basket"),
-    ]
-    fig.suptitle("Strategy Pareto view — 2026-05-10",
-                 fontsize=15, fontweight="bold", y=0.985)
-    fig.legend(handles=family_handles + universe_handles,
-               loc="upper center", ncol=6,
-               bbox_to_anchor=(0.5, 0.945), frameon=False, fontsize=10)
-    fig.text(0.5, 0.015,
-             "Bull windows: SMA/HMM-BTC compounded 2020-21 + 2023-24 on Binance BTC; multi-coin runs 2023-01 → 2025-01 on Binance 6-majors. "
-             "Bear windows: SMA/HMM-BTC compounded 2022 + 2025; multi-coin runs 2025-11 → 2026-05 on Hyperliquid 7-majors (HYPE absent from bull universe).",
-             ha="center", fontsize=8, style="italic", color="#555")
-
-    plt.tight_layout(rect=[0, 0.04, 1, 0.91])
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out_path, dpi=150, bbox_inches="tight", facecolor="white")
-    print(f"wrote {out_path}")
+def STATEGIES_excluding_LA():
+    """Helper — Panel 1+2 exclude R1~ (look-ahead) because it's not tradeable.
+    Panel 3 keeps R1~ for the corr/MDB curiosity."""
+    return [s for s in STRATEGIES if s.status != "~"]
 
 
 if __name__ == "__main__":
-    plot(OUT_PATH)
+    main()

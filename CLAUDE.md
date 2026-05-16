@@ -8,9 +8,17 @@ This is a crypto strategy backtesting setup built on [Freqtrade](https://www.fre
 - `notes.md` — the canonical backtest command and Hyperliquid quirks (USDC quote, pair lists in `data_content_{spot,futures}.txt`).
 - `wiki/` — project knowledge base. Read `wiki/_index.md` and `wiki/learnings.md` before substantive work; update them when facts change. `wiki/reference/` holds stable canonical references (e.g. strategy-archetypes.md).
 
-**Current state (2026-05-05):** Five strategies on the leaderboard (HmmRegime4 pending backtest run). `SmaRegime180` (4h SMA180 + slope gate) is current best: post-all-costs return +5.18%, est. Calmar ~7.2. Fee gotcha: use `--fee 0.00035` CLI flag — the `"fee"` key in config.json is silently ignored by the backtester. `HmmRegime4` strategy implemented (`user_data/strategies/HmmRegime4.py`) — needs `pip install hmmlearn` then backtest run. Funding-rate history collector added to `scripts/download_hyperliquid.py` (`--funding --coins BTC`). Next: run HmmRegime4 backtest and compare vs SmaRegime180. See `wiki/_index.md` leaderboard for current rankings.
+**Project state:** Read `wiki/_index.md` for current leaderboard, candidate book, and headline findings — that's the single source of truth. Do not duplicate status here.
 
-**Visual leaderboard:** `README.md` at repo root embeds `wiki/assets/pareto.png` (the Pareto frontier chart — Bull return vs Bear MDD, plus Calmar vs trade density). Regenerate with `./freqtrade/.venv/bin/python scripts/generate_pareto_chart.py` — reads inline `STRATEGIES` list at the top of the script; edit there when adding a new datapoint. `run_eval.sh` auto-calls it after each baseline eval. **Deprecated:** the old bar-chart leaderboard (`generate_leaderboard_chart.py` + `wiki/assets/leaderboard.png`) was replaced when strategies became regime-conditional and single-metric ranking lost meaning. Script kept for historical reference, not regenerated.
+**Fee gotcha:** use `--fee 0.00035` CLI flag — the `"fee"` key in `config.json` is silently ignored by the backtester. Applies to every backtest in this repo.
+
+**Evaluation tooling (added 2026-05-16):** `scripts/eval_layers.py` is the shared loader + Layer-5 metrics module + correlation/MDB engine. `scripts/dsr_analysis.py` imports loaders from it (single source of truth). `scripts/run_correlation_mdb.py` is the driver — produces `wiki/assets/correlation_matrix.png` + `wiki/results/_correlation_table.json`. Three MDB schemes computed (eq / rp / mv); MDB-rp is the leaderboard headline. Methodology: `wiki/methodology/correlation-and-mdb.md`.
+
+**Visual leaderboard:** `wiki/assets/pareto.png` is now a 3-panel chart (Calmar/MDD, Martin/Ulcer, MDB/corr_to_T3) with status-tagged markers (★/▲/~/✗/·). Regenerate with `./freqtrade/.venv/bin/python scripts/generate_pareto_chart.py` — edit `STRATEGIES` list inline. **Deprecated:** the old bar-chart leaderboard (`generate_leaderboard_chart.py` + `wiki/assets/leaderboard.png`). Kept for history, not regenerated.
+
+**Pre-registration discipline (locked by decision 005):** every new strategy gets a `wiki/decisions/00N-kill-criteria-<strategy>.md` *before* its first backtest. See `decisions/004` (T3 template), `006` (pairs), `007` (cross-sectional), `008` (funding MR). Non-negotiable.
+
+**5-coin config:** `user_data/config_binance_5coin.json` holds the BTC/ETH/SOL/AVAX/DOGE universe for multi-asset strategies. `config_binance.json` is BTC-only.
 
 **Venv path fix (2026-05-05):** After repo moved to `algo-traders/backtesting/`, all shebangs and the editable install were stale. Fixed by: patching `__editable___freqtrade_2026_4_dev0_finder.py` MAPPING, adding `freqtrade-src.pth` to site-packages, rewriting all bin shebangs. If the repo moves again, run: `grep -rl OLD_PATH freqtrade/.venv/bin/ | xargs sed -i '' 's|OLD|NEW|g'` and update the `.pth` and finder files.
 

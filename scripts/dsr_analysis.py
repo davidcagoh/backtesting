@@ -29,13 +29,15 @@ from __future__ import annotations
 
 import json
 import math
-import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from scipy import stats
+
+# Shared loaders moved to eval_layers.py (single source of truth, A1 refactor).
+from eval_layers import load_daily_returns, load_trade_returns  # noqa: F401
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -68,36 +70,6 @@ class StratStats:
     n_obs: int
     sharpe_star: float = 0.0
     dsr: float = 0.0
-
-
-def load_daily_returns(zip_path: Path) -> pd.Series:
-    """Return daily log-returns of the wallet balance from a freqtrade backtest zip."""
-    with zipfile.ZipFile(zip_path) as z:
-        wallet_files = [n for n in z.namelist() if n.endswith("_wallet.feather")]
-        if not wallet_files:
-            raise FileNotFoundError(f"no wallet feather in {zip_path.name}")
-        with z.open(wallet_files[0]) as f:
-            df = pd.read_feather(f)
-    df = df[["date", "total_quote"]].copy()
-    df["date"] = pd.to_datetime(df["date"], utc=True)
-    df = df.set_index("date")
-    # Resample to daily — last value per day.
-    daily = df["total_quote"].resample("1D").last().dropna()
-    log_ret = np.log(daily / daily.shift(1)).dropna()
-    return log_ret
-
-
-def load_trade_returns(zip_path: Path) -> pd.Series:
-    """Return per-trade profit ratios. Each trade is one observation."""
-    with zipfile.ZipFile(zip_path) as z:
-        name = [n for n in z.namelist()
-                if n.endswith(".json") and "config" not in n and "meta" not in n][0]
-        d = json.loads(z.read(name))
-    strat = list(d["strategy"].values())[0]
-    trades = pd.DataFrame(strat["trades"])
-    if trades.empty:
-        return pd.Series(dtype=float)
-    return trades["profit_ratio"]
 
 
 def compute_sharpe(returns: pd.Series, annualisation: float = 365.0) -> tuple[float, float, float, int]:
