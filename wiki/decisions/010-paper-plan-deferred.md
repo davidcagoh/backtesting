@@ -13,7 +13,7 @@ The paper's strongest claim is "this evaluation framework identifies a candidate
 
 1. **Forward held-out window** (Binance 2026-06 → 2026-12, locked by decision 005 pre-decision Q3). Currently untouched and must remain so until this sprint completes.
 2. **30-day paper-trade dry-run** for the candidate book {T3, R∧T2} on Hyperliquid (per decision 004 / 005 next-sprint).
-3. **Decision 009** — portfolio-aware K1. The R∧T2 "K1 breach is portfolio-justified" framing is currently informal; it needs to be codified before review.
+3. **Decision 009** — portfolio-aware K1. The R∧T2 "K1 breach is portfolio-justified" framing is currently informal; it needs to be codified before review. ✅ 2026-05-16 — decision 009 codifies the portfolio-aware K1 rule.
 4. **Two-leg PairsZScore v2** — pre-decision Q4 was overridden to single-leg in the 2026-05-16 sprint. Either the v2 implementation rescues X1 (changes results) or confirms the killed verdict (strengthens it). Either way the result changes the paper.
 5. **Extend Binance funding parquets to full 5.5y** — currently 2.3y of 5.5y, which truncates C1 and F1 evaluation. Re-running these on full history may move them between categories.
 

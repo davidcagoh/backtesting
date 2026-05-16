@@ -116,10 +116,18 @@ Updated 2026-05-10.
 - **Pre-registered kill criteria** for SmaRegime180 — `decisions/004-kill-criteria-sma-regime-180.md`. Hard kills (MDD > 5.5%, six straight stops, 365d return ≤ 0 for 30d, walk-forward Calmar < 2). Continuous-shrinkage formula tying live size to rolling 180d PF, Calmar, and bull/bear ratio (Davies–Ravagnani 2026). Quarterly walk-forward review mandatory.
 - **CEX bull-window validation** for SmaRegime180 — Binance BTC/USDT:USDT perp 4h, 2019-10 → 2026-05, 6.7y, 92 trades, 2 bull + 2 bear cycles. Full-window Calmar 7.23 (vs Hyperliquid 8.68), SQN 1.73, PF 2.85, MDD 2.22%, win rate 21.7% (vs 21.9% on Hyperliquid — structurally identical). Sub-windows: bulls Calmar 14 / 21, 2022 deep bear Calmar −5.23 with PF 0 but MDD 0.28% (slope gate correctly stays flat), 2025 mild bear +1.61%. **SmaRegime180 graduates from leaderboard headline to paper-trading candidate.** H7 inflation is bounded (~20%), not collapsing.
 
-**Next:**
-1. **Run HmmRegime4Rolling on the same Binance window.** HMM was tuned on Hyperliquid; without the same cross-cycle check we cannot tell whether SQN 0.59 is regime-specific or structural. Same data, same fee, same script.
-2. **Reverse-sign HmmCarry** (positive funding as bull confirmation; ~10 min per yesterday's HmmCarry post-mortem).
-3. **Begin 30-day paper-trading dry-run for SmaRegime180** on Hyperliquid live, evaluating against decisions/004 kill criteria.
+**Next (refreshed 2026-05-16 post-sprint):**
+
+Paper prerequisites (per `decisions/010-paper-plan-deferred.md`):
+1. **Begin 30-day paper-trading dry-run for the candidate book {T3, R∧T2}** on Hyperliquid live, evaluating against decisions/004 (T3 standalone K1) and decisions/009 (portfolio-aware K1). Live action — schedule, not autonomous.
+2. **Two-leg PairsZScore v2.** Decision 005 pre-decision Q4 was overridden to single-leg in the 05-16 sprint. Implement v2 (two-leg cointegration with proper hedge ratio); either rescues X1 (changes results) or confirms killed verdict (strengthens it). Result feeds the paper.
+3. **Extend Binance funding parquets from 2.3y → full 5.5y.** Currently truncates C1 (FundingCarry) and F1 (FundingExtremeMR) evaluation. Re-run both on full history; may move them between categories.
+4. **Forward held-out window** (Binance 2026-06 → 2026-12, locked by decision 005). Stays untouched until the above three complete.
+
+Secondary follow-ups (smaller, can run in parallel with #2/#3):
+5. **Reverse-sign HmmCarry** (positive funding as bull confirmation; ~10 min). Listed in the 05-10 post-mortem; still queued.
+6. **Compute combined-book MDD on the common window** via `scripts/run_correlation_mdb.py`. Decision 009 §3 needs this scalar to confirm the portfolio-aware gate's ✓ for {T3, R∧T2} is actual, not provisional.
+7. **Backfill Ulcer column** across remaining leaderboard rows (a few are still "—").
 
 **Earlier 2026-05-10 priorities (still open):**
 

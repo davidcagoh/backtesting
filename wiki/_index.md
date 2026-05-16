@@ -21,6 +21,7 @@ Crypto strategy backtesting setup built on [Freqtrade](https://www.freqtrade.io/
   - [002-hyperliquid-deep-history.md](decisions/002-hyperliquid-deep-history.md) — accept the 5000-candle API cap; reconstruct from S3 only if needed
   - [003-baseline-eval.md](decisions/003-baseline-eval.md) — baseline used by `scripts/run_eval.sh` and the Session Start Routine
   - [004-kill-criteria-sma-regime-180.md](decisions/004-kill-criteria-sma-regime-180.md) — pre-registered hard-kill thresholds + continuous-shrinkage formula for SmaRegime180
+  - [009-portfolio-aware-k1.md](decisions/009-portfolio-aware-k1.md) — codifies the portfolio-aware K1 exception used to admit R∧T2 (standalone MDD breach OK iff combined-book MDD ≤ 5.5% AND MDB-rp ≥ 0.30 robust AND corr < 0.85, with 11% hard cap)
 - `experiments/` — backtest runs and results
 - `results/` — per-strategy report cards (one file per run)
 - `papers/` — summaries of relevant research (populated by the weekly paper-search agent)
@@ -129,7 +130,7 @@ Sort: **Calmar descending**. Highlighted = top candidates by family.
 
 ¹⁴ **MDB-rp values changed** when the book expanded from {T3} to {T3, R∧T2}. R∧T1/V3 went from robust-positive to non-robust because they overlap entirely with R∧T2 (Pearson 0.96-1.00) — the second strategy already absorbs their signal. This is the methodology behaving correctly: each strategy is evaluated against what the book *currently* contains. Old MDB values vs book = {T3} alone preserved in `wiki/results/_correlation_table.json` v1 archive.
 
-¹⁵ **X2 CrossSectionalMomentum**: robust-positive MDB-rp +0.048. Standalone MDD 13.04% **breaches K1-xs (12%) by 1pp** — per `decisions/007-kill-criteria-cross-sectional.md`, this is a hard kill on standalone metrics. But MDB-rp robust positive means the strategy adds to the portfolio book. Decision deferred until human-review of the K1-xs threshold (analogous to R∧T2 case). Documented as ▲ frontier pending decision 009.
+¹⁵ **X2 CrossSectionalMomentum**: standalone MDD 13.04% breaches K1-xs (12%) per `decisions/007-kill-criteria-cross-sectional.md`. MDB-rp +0.048 is robust-positive but below the 0.30 magnitude floor codified in `decisions/009-portfolio-aware-k1.md`. **Verdict (2026-05-16): X2 does NOT enter the candidate book.** Family stays on the leaderboard as ▲ frontier for diversity reference; a future X2 variant must clear both standalone MDD *and* MDB-rp ≥ 0.30. See decision 009 §6.
 
 ¹⁶ R2 has technically-robust MDB but values are vanishingly small (+0.010, +0.011, +0.012). Practical interpretation: this is statistical noise, not a real diversification signal. Kept ✗ status.
 
