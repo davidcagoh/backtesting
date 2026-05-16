@@ -104,6 +104,9 @@ Explain the mechanism, not just the metric — so we don't re-explore variants.
 Updated 2026-05-10.
 
 **Done (2026-05-16):**
+- **Two-leg PairsZScoreV2 shipped** (`user_data/strategies/PairsZScoreV2.py`, SOL+DOGE, 5.5y common window): +3.04% / Calmar 0.97 / MDD 2.91% / SQN 0.42 / 13 trade-legs. **Confirms v1's X1 kill** rather than rescuing it — SOL leg is essentially directional alpha; DOGE leg loses 7/8 trades to per-leg −10% stops *before* the joint z-score mean-reverts. Surfaces a Freqtrade framework limit: per-leg stops break atomic pair execution. Decision 010 prerequisite #4 resolved. See `wiki/results/2026-05-16-pairs-zscore-v2.md`.
+- **Binance funding parquets extended to full 5.5y (2020-09 → 2026-05) for all 5 coins; C1 and F1 re-backtested.** C1 (FundingCarry): +32.44% / Calmar 1.93 / MDD 15.65% / SQN 1.22 — real standalone edge but MDD kills it (2.85× K1, > 11% decision-009 hard cap). F1 (FundingExtremeMR): −11.60% / Calmar −0.32 / MDD 33.51% — stays killed; not a truncation artefact. See `wiki/results/2026-05-16-funding-{carry,extreme-mr}-fullwin.md`. Unblocks decision-010 prerequisite #5.
+- **Reverse-sign HmmCarry tested** (`HmmCarryReverse`, 5-coin Binance common window): +12.67% total / Calmar 0.78 / MDD 15.09% / SQN 0.56 / 2006 trades / win rate 34.8%. Sign flip is directionally correct vs the 05-10 HmmCarry catastrophe (HmmCarry Calmar 0.08, MDD 35.46%) — confirms the anti-complementarity mechanism — but **still fails K1 by 2.7×** and decision 009 portfolio gate by an even wider margin. BTC win rate rehabilitated (7.7%→35.9%); AVAX has opposite sign (−9.79%). **Single-rule HMM × funding conjunction is killed in both sign directions**; only per-coin signed-funding remains as a live extension. See `wiki/results/2026-05-16-hmm-carry-reverse.md`.
 - **Layer-5 evaluation tooling shipped** (`scripts/eval_layers.py`). 6 result cards backfilled with tail/path metrics. Decision 005 published. See `wiki/decisions/005-evaluation-and-diversity-plan.md`.
 - **Pre-decisions locked in** for the evaluation-and-diversity buildout (correlation window, MDB weighting, held-out reserve, pairs mechanics). Documented in decision 005 section 7.
 - **Cross-cycle re-backtest on Binance 5-coin common window (2020-09 → 2026-05)** completed for 12 strategies — 6 BTC-only + 6 multi-asset. Results appended to `_index.md` as "Common-Window Leaderboard (A1.5)".
@@ -125,7 +128,7 @@ Paper prerequisites (per `decisions/010-paper-plan-deferred.md`):
 4. **Forward held-out window** (Binance 2026-06 → 2026-12, locked by decision 005). Stays untouched until the above three complete.
 
 Secondary follow-ups (smaller, can run in parallel with #2/#3):
-5. **Reverse-sign HmmCarry** (positive funding as bull confirmation; ~10 min). Listed in the 05-10 post-mortem; still queued.
+5. ~~**Reverse-sign HmmCarry**~~ — **DONE 2026-05-16**: sign flip is directionally correct (+12.67% vs HmmCarry's MDD-35% disaster, BTC win rate rehabilitated 7.7%→35.9%) but MDD 15.09% still fails K1 by 2.7×; Calmar 0.78. AVAX has opposite sign. **Single-rule HMM×funding conjunction killed in both sign directions**; only per-coin signed-funding remains live. See `wiki/results/2026-05-16-hmm-carry-reverse.md`.
 6. **Compute combined-book MDD on the common window** via `scripts/run_correlation_mdb.py`. Decision 009 §3 needs this scalar to confirm the portfolio-aware gate's ✓ for {T3, R∧T2} is actual, not provisional.
 7. **Backfill Ulcer column** across remaining leaderboard rows (a few are still "—").
 

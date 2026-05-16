@@ -82,16 +82,16 @@ Walking R∧T2 through the gate against book *B* = {T3} (the state at the moment
 | `standalone_MDD(C) ≤ K1_standalone` | ≤ 5.5% | 6.05% | ✗ |
 | → falls through to portfolio path | | | |
 | `standalone_MDD(C) ≤ K1_hard_cap` | ≤ 11.0% | 6.05% | ✓ |
-| `combined_MDD(B ∪ {C}) ≤ K1_book` | ≤ 5.5% | not yet a single explicit reported figure¹ | provisional ✓ |
+| `combined_MDD(B ∪ {C}) ≤ K1_book` | ≤ 5.5% | **MDD_rp = 2.12%** (MDD_eq = 3.20%, MDD_mv = 1.99%)¹ | ✓ confirmed |
 | `MDB > 0` robust (eq, rp, mv) | all positive | all positive (per `_correlation_table.json`) | ✓ |
 | `MDB-rp(C, B) ≥ 0.30` | ≥ 0.30 | +0.55 | ✓ |
 | `max_pairwise_pearson(C, B) < 0.85` | < 0.85 | 0.07 (only T3 in book) | ✓ |
 
-¹ The combined-book MDD on the common window is not yet pulled out as a standalone scalar in `_index.md` — `_correlation_table.json` holds the daily-return matrix from which it's derived. Given corr 0.07 and risk-parity weights ~ inverse of vol, the combined MDD is bounded above by the higher of (weighted T3 MDD, weighted R∧T2 MDD) and is expected ≤ 5.5%. This must be confirmed by the next run of `scripts/run_correlation_mdb.py` and surfaced as an explicit column on the common-window leaderboard. Until that confirmation, the verdict below is **provisional**.
+¹ Computed by `scripts/combined_book_mdd.py` on the A1.5 common window (2020-09-24 → 2026-05-09, 2054 days), using the same risk-parity vol_window=90 and equity-curve construction as `eval_layers.py`. Risk-parity weights at the window endpoint were {T3: 0.685, R∧T2: 0.315}; mean-var weights {T3: 0.707, R∧T2: 0.293}. MDD_rp = 2.12% is the headline. All three schemes clear K1 = 5.5% by a wide margin — combined book sits at <40% of the gate. This is consistent with the *a priori* expectation given Pearson 0.07: the weighted book's MDD is bounded well below either standalone MDD (2.21% T3, 6.05% R∧T2), because their drawdowns occur at different times and risk-parity caps R∧T2's contribution.
 
-**Verdict (provisional, pending explicit combined-book MDD readout):** R∧T2 passes the portfolio-aware gate. Standalone K1 breach is accepted because (a) it is well under the 11% hard cap, (b) MDB-rp is +0.55 robust — well above the 0.30 threshold, (c) the candidate is statistically distinct from the existing book (Pearson 0.07).
+**Verdict (confirmed):** R∧T2 passes the portfolio-aware gate. Standalone K1 breach is accepted because (a) standalone MDD 6.05% is well under the 11% hard cap, (b) MDB-rp is +0.55 robust — well above the 0.30 threshold, (c) the candidate is statistically distinct from the existing book (Pearson 0.07), and (d) **combined-book MDD_rp = 2.12% ≤ 5.5%** — the previously provisional clause is now an explicit scalar.
 
-Action item to lift the provisional flag: add `combined_MDD_book` to the common-window leaderboard in `_index.md` and to `_correlation_table.json`'s reported summary. If the figure exceeds 5.5%, R∧T2 is killed under this same gate.
+Follow-up: surface `combined_MDD_book` (2.12% rp / 3.20% eq / 1.99% mv) on the common-window leaderboard in `_index.md`, and recompute at each quarterly review per §5 below.
 
 ---
 

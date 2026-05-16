@@ -14,8 +14,8 @@ The paper's strongest claim is "this evaluation framework identifies a candidate
 1. **Forward held-out window** (Binance 2026-06 → 2026-12, locked by decision 005 pre-decision Q3). Currently untouched and must remain so until this sprint completes.
 2. **30-day paper-trade dry-run** for the candidate book {T3, R∧T2} on Hyperliquid (per decision 004 / 005 next-sprint).
 3. **Decision 009** — portfolio-aware K1. The R∧T2 "K1 breach is portfolio-justified" framing is currently informal; it needs to be codified before review. ✅ 2026-05-16 — decision 009 codifies the portfolio-aware K1 rule.
-4. **Two-leg PairsZScore v2** — pre-decision Q4 was overridden to single-leg in the 2026-05-16 sprint. Either the v2 implementation rescues X1 (changes results) or confirms the killed verdict (strengthens it). Either way the result changes the paper.
-5. **Extend Binance funding parquets to full 5.5y** — currently 2.3y of 5.5y, which truncates C1 and F1 evaluation. Re-running these on full history may move them between categories.
+4. **Two-leg PairsZScore v2** — pre-decision Q4 was overridden to single-leg in the 2026-05-16 sprint. Either the v2 implementation rescues X1 (changes results) or confirms the killed verdict (strengthens it). Either way the result changes the paper. ✅ 2026-05-16 — `PairsZScoreV2` (SOL+DOGE, two-leg, equal-dollar) shipped and backtested on the 5.5y common window: +3.04% / Calmar 0.97 / MDD 2.91% / 13 trade-legs. **Verdict strengthened (not rescued)** — SOL leg is directional alpha during 2021/2024 SOL runs; DOGE leg loses 7/8 trades to per-leg −10% stops before joint z-score reverts. Adds a framework finding: Freqtrade can't express atomic pair trades because stops are per-instrument, not per-spread. See `wiki/results/2026-05-16-pairs-zscore-v2.md`.
+5. **Extend Binance funding parquets to full 5.5y** — currently 2.3y of 5.5y, which truncates C1 and F1 evaluation. Re-running these on full history may move them between categories. ✅ 2026-05-16 — done. Parquets backfilled to 2020-09-23 → 2026-05-09 for all 5 coins. C1 re-run: +32.44% / Calmar 1.93 / MDD 15.65% (real standalone edge but MDD still kills it). F1 re-run: −11.60% / Calmar −0.32 / MDD 33.51% (stays killed; not a truncation artefact). See `wiki/results/2026-05-16-funding-carry-fullwin.md` and `wiki/results/2026-05-16-funding-extreme-mr-fullwin.md`.
 
 Writing now means writing twice. Each of the five items above rewrites at least one section of the paper. Better to write once, after the project is mature.
 
@@ -61,9 +61,9 @@ Writing now means writing twice. Each of the five items above rewrites at least 
 
 In order:
 
-1. [ ] Decision 009 (portfolio-aware K1) is written and applied.
-2. [ ] Two-leg PairsZScore v2 ships and X1 is re-evaluated.
-3. [ ] Binance funding parquets extended to 5.5y; C1 and F1 re-run on full window.
+1. [x] Decision 009 (portfolio-aware K1) is written and applied. (2026-05-16: written; combined-book MDD_rp = 2.12% confirmed via `scripts/combined_book_mdd.py`.)
+2. [x] Two-leg PairsZScore v2 ships and X1 is re-evaluated. (2026-05-16: shipped, X1 kill strengthened, framework limit recorded.)
+3. [x] Binance funding parquets extended to 5.5y; C1 and F1 re-run on full window. ✅ 2026-05-16 — see `wiki/results/2026-05-16-funding-{carry,extreme-mr}-fullwin.md`.
 4. [ ] 30-day Hyperliquid paper-trade dry-run for {T3, R∧T2} completes; result documented.
 5. [ ] Forward held-out window (Binance 2026-06 → 2026-12) downloaded and run once; result documented verbatim (no parameter tweaks).
 

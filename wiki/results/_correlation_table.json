@@ -664,5 +664,27 @@
     "MDB-rp uses 90-day vol window for risk-parity weights (pre-decision Q2).",
     "MDB-mv uses long-only Markowitz tangency (\u03a3\u207b\u00b9\u03bc, clipped, normalized). Unstable at small N \u2014 treat as upper bound.",
     "Missing-day returns filled with 0 (strategy was flat). Pulls correlation toward zero by construction."
-  ]
+  ],
+  "combined_book_mdd": {
+    "book": [
+      "T3",
+      "R\u2227T2"
+    ],
+    "window": "2020-09-24 \u2192 2026-05-09 (2054 days)",
+    "mdd_eq_pct": -3.2,
+    "mdd_rp_pct": -2.12,
+    "mdd_mv_pct": -1.99,
+    "weights_rp": {
+      "T3": 0.6853,
+      "R\u2227T2": 0.3147
+    },
+    "weights_mv": {
+      "T3": 0.7072,
+      "R\u2227T2": 0.2928
+    },
+    "k1_gate_pct": 5.5,
+    "verdict_rp": "PASS",
+    "source_script": "scripts/combined_book_mdd.py",
+    "note": "MDD_rp = 2.12% confirms decision 009 \u00a74 portfolio-path admission of R\u2227T2 (was provisional)."
+  }
 }
